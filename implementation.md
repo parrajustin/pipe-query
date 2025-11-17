@@ -52,6 +52,18 @@ The parser will be responsible for taking a raw query string and turning it into
     -   Builds the AST based on the grammar of the pipe query syntax.
     -   The output will be a tree of operations that can be executed by the processor.
 
+    #### Grammar Root Nodes
+    
+    The parser will recognize two main types of statements, each with its own root node in the grammar:
+    
+    1.  **Queries and Subqueries:** These always begin with the `FROM` keyword. The parser will continue to build the query pipeline until it encounters a terminator.
+        -   For a main query, the terminator is the end of the input string or a semicolon (`;`).
+        -   For a subquery enclosed in parentheses, the terminator is the closing parenthesis `)`.
+    
+    2.  **Function Definitions:** These are used for creating temporary User-Defined Functions (UDFs) or Table-Valued Functions (TVFs) and always start with the `CREATE` keyword.
+        -   The parser will handle `CREATE TEMP FUNCTION` or `CREATE TEMP TABLE FUNCTION` statements.
+        -   These definitions are terminated by a semicolon (`;`). A query can contain multiple `CREATE` statements before the main `FROM` clause.
+
 ### Phase 3: The Query Processor
 
 The processor (or interpreter) will take the AST and the input data and produce the final result.
