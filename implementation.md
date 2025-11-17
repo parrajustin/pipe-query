@@ -699,12 +699,24 @@ The public API is the entry point for executing queries. It is designed to be fl
     -   The processor function takes the data context (if no data provider is used) and executes the query.
 
     ```typescript
+    // Type definition for a scalar User-Defined Function (UDF)
+    type ScalarFunction = (...args: any[]) => any;
+
+    // Type definition for a Table-Valued Function (TVF)
+    type TableFunction = (inputTable: any[], ...args: any[]) => any[];
+
     interface QueryProcessorOptions {
       dataProvider?: DataProvider;
+      functions?: Record<string, ScalarFunction>;
+      tableFunctions?: Record<string, TableFunction>;
     }
 
     function createQueryProcessor(query: string, options?: QueryProcessorOptions): (dataContext?: object) => Promise<any[]>;
     ```
+
+    -   `dataProvider`: An optional function to dynamically fetch data.
+    -   `functions`: An optional map of custom scalar functions (UDFs) to be made available in the query.
+    -   `tableFunctions`: An optional map of custom table-valued functions (TVFs) that can be invoked with the `CALL` operator.
 
 ##### **Example 1: Using a Static Data Context**
 
@@ -784,3 +796,203 @@ const result = await processor();
     -   ["SQL Has Problems. We Can Fix Them: Pipe Syntax In SQL"](https://research.google/pubs/sql-has-problems-we-can-fix-them-pipe-syntax-in-sql/)
 -   **Parser and Compiler Theory:**
     -   For inspiration on building parsers and interpreters, resources like Crafting Interpreters by Robert Nystrom or the Dragon Book can be valuable.
+
+### User-Defined Functions
+
+The library provides the ability to register custom scalar and table-valued functions to extend the query language with domain-specific logic.
+
+#### **User-Defined Functions (UDFs)**
+
+Custom scalar functions (UDFs) can be registered when the query processor is created.
+
+-   **Function Signature:** `type ScalarFunction = (...args: any[]) => any;`
+-   **Registration:** UDFs are passed in a `functions` map within the `QueryProcessorOptions`.
+
+**Pseudo-code Example (Registering and using a UDF):**
+
+```typescript
+import { createQueryProcessor } from 'pipe-query-library';
+
+// 1. Define a custom function.
+const getInitials = (name: string): string => {
+  if (!name) return '';
+  return name.split(' ').map(part => part[0]).join('').toUpperCase();
+};
+
+const query = `
+  FROM users
+  |> EXTEND getInitials(name) AS initials
+`;
+
+// 2. Register the function when creating the processor.
+const processor = createQueryProcessor(query, {
+  functions: {
+    getInitials: getInitials,
+  },
+});
+
+const dataContext = {
+  users: [
+    { name: 'Alice Smith' },
+    { name: 'Bob Johnson' },
+  ],
+};
+
+// 3. Execute the query.
+const result = await processor(dataContext);
+
+// `result` would be:
+// [
+//   { name: 'Alice Smith', initials: 'AS' },
+//   { name: 'Bob Johnson', initials: 'BJ' },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The `createQueryProcessor` function should merge the provided `functions` map with the internal registry of built-in functions.
+    -   If a UDF has the same name as a built-in function, the UDF should take precedence.
+
+#### **User-Defined Table-Valued Functions (TVFs)**
+
+Custom table-valued functions (TVFs) can also be registered and are invoked using the `CALL` operator.
+
+-   **Function Signature:** `type TableFunction = (inputTable: any[], ...args: any[]) => any[];`
+-   **Registration:** TVFs are passed in a `tableFunctions` map within the `QueryProcessorOptions`.
+
+**Pseudo-code Example (Registering and using a TVF):**
+
+```typescript
+import { createQueryProcessor } from 'pipe-query-library';
+
+// 1. Define a custom TVF.
+const unnestByColumn = (inputTable: any[], columnName: string): any[] => {
+  return inputTable.flatMap(row => {
+    const array = row[columnName];
+    if (Array.isArray(array)) {
+      return array.map(value => ({ ...row, unnested_value: value }));
+    }
+    return { ...row, unnested_value: null };
+  });
+};
+
+const query = `
+  FROM data
+  |> CALL unnestByColumn('tags')
+`;
+
+// 2. Register the TVF.
+const processor = createQueryProcessor(query, {
+  tableFunctions: {
+    unnestByColumn: unnestByColumn,
+  },
+});
+
+const dataContext = {
+  data: [
+    { id: 1, tags: ['a', 'b'] },
+    { id: 2, tags: ['c'] },
+  ],
+};
+
+// 3. Execute the query.
+const result = await processor(dataContext);
+
+// `result` would be:
+// [
+//   { id: 1, tags: ['a', 'b'], unnested_value: 'a' },
+//   { id: 1, tags: ['a', 'b'], unnested_value: 'b' },
+//   { id: 2, tags: ['c'], unnested_value: 'c' },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The `createQueryProcessor` should store the provided `tableFunctions` in a registry.
+    -   The `CALL` operator looks up the function in this registry and executes it.
+
+### Defining Functions in the Syntax
+
+In addition to registering functions at creation time, the query syntax should support the definition of temporary functions directly within the query string, as per the ZetaSQL standard.
+
+-   **Syntax for Scalar Functions (UDFs):**
+    ```sql
+    CREATE TEMP FUNCTION <function_name>([<arg_name> <arg_type>, ...])
+    AS (<expression>);
+    ```
+
+-   **Syntax for Table-Valued Functions (TVFs):**
+    ```sql
+    CREATE TEMP TABLE FUNCTION <function_name>([<arg_name> <arg_type>, ...])
+    AS (<query>);
+    ```
+
+**Pseudo-code Example (Defining and using a temporary UDF):**
+
+```typescript
+const query = `
+  CREATE TEMP FUNCTION multiply(x INT64, y INT64) AS (x * y);
+
+  FROM products
+  |> EXTEND multiply(price, 2) AS doubled_price
+`;
+
+// The processor is created with the full query string.
+// The library user does NOT need to provide a separate JS implementation.
+const processor = createQueryProcessor(query);
+
+const dataContext = {
+  products: [
+    { price: 10 },
+    { price: 20 },
+  ],
+};
+
+// The main query is executed.
+const result = await processor(dataContext);
+
+// `result` would be:
+// [
+//   { price: 10, doubled_price: 20 },
+//   { price: 20, doubled_price: 40 },
+// ]
+```
+
+**Pseudo-code Example (Defining and using a temporary TVF):**
+
+```typescript
+const query = `
+  CREATE TEMP TABLE FUNCTION filter_by_category(category_name STRING)
+  AS (
+    FROM products
+    |> WHERE category == category_name
+  );
+
+  CALL filter_by_category('fruit')
+`;
+
+// The processor is created with the full query string.
+const processor = createQueryProcessor(query);
+
+// The data context provides the 'products' table used inside the TVF.
+const dataContext = {
+  products: [
+    { product: 'Apple', category: 'fruit' },
+    { product: 'Carrot', category: 'vegetable' },
+    { product: 'Banana', category: 'fruit' },
+  ],
+};
+
+// The main query (the CALL statement) is executed.
+const result = await processor(dataContext);
+
+// `result` would be:
+// [
+//   { product: 'Apple', category: 'fruit' },
+//   { product: 'Banana', category: 'fruit' }
+// ]
+```
+
+-   **Implementation Details:**
+    -   The parser must be extended to handle `CREATE TEMP FUNCTION` and `CREATE TEMP TABLE FUNCTION` statements. These should be parsed before the main query begins.
+    -   For UDFs, the `AS (<expression>)` body is parsed into an executable expression.
+    -   For TVFs, the `AS (<query>)` body is parsed into an AST, which can be executed later when the TVF is called. The arguments of the TVF can be used as parameters within its query body.
+    -   These temporary functions are stored in the query context and are available only for the duration of the query execution.
