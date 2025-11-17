@@ -738,9 +738,7 @@ To provide maximum flexibility, the library will support user-defined functions 
 
 Users can define functions in TypeScript and register them when the query processor is created. This is the recommended approach for complex or frequently used logic.
 
-**UDF (User-Defined Function):** A function that takes one or more scalar values and returns a single scalar value.
-
-**TVF (Table-Valued Function):** A function that returns a table (an array of objects).
+**UDF (User-Defined Function):** A function that takes one or more scalar values and returns a single scalar value. Note that UDFs cannot take a table as a parameter.
 
 **`FunctionRegistry` Interface:**
 
@@ -789,57 +787,12 @@ const result = await processor(dataContext);
 // ]
 ```
 
-**Pseudo-code Example (TVF):**
-
-TVFs are invoked using the `CALL` pipe operator. The `CALL` operator passes the current data stream as the first argument to the TVF.
-
-```typescript
-// Define a TVF that unnests an array property into separate rows
-const unnest = (inputTable: any[], columnName: string): any[] => {
-  const output = [];
-  for (const row of inputTable) {
-    if (Array.isArray(row[columnName])) {
-      for (const item of row[columnName]) {
-        output.push({ ...row, [columnName]: item });
-      }
-    }
-  }
-  return output;
-};
-
-// Register the TVF
-const processor = createQueryProcessor(
-  `FROM user_hobbies |> CALL unnest('hobbies')`,
-  {
-    functions: {
-      unnest,
-    },
-  }
-);
-
-const dataContext = {
-  user_hobbies: [
-    { name: 'Alice', hobbies: ['reading', 'hiking'] },
-    { name: 'Bob', hobbies: ['gaming'] },
-  ],
-};
-
-const result = await processor(dataContext);
-
-// result would be:
-// [
-//   { name: 'Alice', hobbies: 'reading' },
-//   { name: 'Alice', hobbies: 'hiking' },
-//   { name: 'Bob', hobbies: 'gaming' },
-// ]
-```
-
 #### 2. Temporary Functions in Queries
 
 For functions that are specific to a single query, users can define them directly in the query string using `CREATE TEMP FUNCTION`.
 
 -   **Syntax (UDF):** `CREATE TEMP FUNCTION <name>(<args>) AS (<expression>); <query>`
--   **Syntax (TVF):** `CREATE TEMP FUNCTION <name>(<args>) AS (<subquery>); <query>`
+-   **Syntax (TVF):** `CREATE TEMP TABLE FUNCTION <name>(<args>) AS (<subquery>); <query>`
 
 **Pseudo-code Example (Temporary UDF):**
 
@@ -871,7 +824,7 @@ const result = await processor(dataContext);
 
 ```typescript
 const query = `
-  CREATE TEMP FUNCTION get_senior_users(users_table) AS (
+  CREATE TEMP TABLE FUNCTION get_senior_users(users_table) AS (
     FROM users_table |> WHERE age >= 30
   );
   FROM get_senior_users(users)
