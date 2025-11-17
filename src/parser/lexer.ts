@@ -13,6 +13,9 @@ export enum TokenType {
   SEMICOLON = 'SEMICOLON',
   SLASH = 'SLASH',
   STAR = 'STAR',
+  AMPERSAND = 'AMPERSAND',
+  CARET = 'CARET',
+  TILDE = 'TILDE',
 
   // One or two character tokens
   BANG = 'BANG',
@@ -23,8 +26,12 @@ export enum TokenType {
   GREATER_EQUAL = 'GREATER_EQUAL',
   LESS = 'LESS',
   LESS_EQUAL = 'LESS_EQUAL',
+  LESS_GREATER = 'LESS_GREATER', // <>
   PIPE = 'PIPE',
   PIPE_GREATER = 'PIPE_GREATER', // |>
+  PIPE_PIPE = 'PIPE_PIPE', // ||
+  SHIFT_LEFT = 'SHIFT_LEFT', // <<
+  SHIFT_RIGHT = 'SHIFT_RIGHT', // >>
 
   // Literals
   IDENTIFIER = 'IDENTIFIER',
@@ -33,35 +40,49 @@ export enum TokenType {
 
   // Keywords
   AS = 'AS',
+  ASC = 'ASC',
   AGGREGATE = 'AGGREGATE',
   AND = 'AND',
+  BETWEEN = 'BETWEEN',
   BY = 'BY',
   CALL = 'CALL',
   CREATE = 'CREATE',
+  DATE = 'DATE',
+  DATETIME = 'DATETIME',
   DISTINCT = 'DISTINCT',
+  DESC = 'DESC',
   EXCEPT = 'EXCEPT',
   EXTEND = 'EXTEND',
   ELSE = 'ELSE',
   END = 'END',
   FALSE = 'FALSE',
   FROM = 'FROM',
+  FULL = 'FULL',
   FUNCTION = 'FUNCTION',
   GROUP = 'GROUP',
   IF = 'IF',
   IN = 'IN',
+  INNER = 'INNER',
+  IS = 'IS',
   JOIN = 'JOIN',
+  LEFT = 'LEFT',
+  LIKE = 'LIKE',
   LIMIT = 'LIMIT',
-  NIL = 'NIL',
+  NULL = 'NULL',
   NOT = 'NOT',
   ON = 'ON',
   OR = 'OR',
   ORDER = 'ORDER',
+  OUTER = 'OUTER',
   RENAME = 'RENAME',
+  RIGHT = 'RIGHT',
   SELECT = 'SELECT',
   SET = 'SET',
+  STRUCT = 'STRUCT',
   TABLE = 'TABLE',
   TEMP = 'TEMP',
   THEN = 'THEN',
+  TIMESTAMP = 'TIMESTAMP',
   TRUE = 'TRUE',
   UNION = 'UNION',
   WHERE = 'WHERE',
@@ -90,35 +111,49 @@ export class Lexer {
 
   private static readonly keywords: { [key: string]: TokenType } = {
     as: TokenType.AS,
+    asc: TokenType.ASC,
     aggregate: TokenType.AGGREGATE,
     and: TokenType.AND,
+    between: TokenType.BETWEEN,
     by: TokenType.BY,
     call: TokenType.CALL,
     create: TokenType.CREATE,
+    date: TokenType.DATE,
+    datetime: TokenType.DATETIME,
     distinct: TokenType.DISTINCT,
+    desc: TokenType.DESC,
     except: TokenType.EXCEPT,
     extend: TokenType.EXTEND,
     else: TokenType.ELSE,
     end: TokenType.END,
     false: TokenType.FALSE,
     from: TokenType.FROM,
+    full: TokenType.FULL,
     function: TokenType.FUNCTION,
     group: TokenType.GROUP,
     if: TokenType.IF,
     in: TokenType.IN,
+    inner: TokenType.INNER,
+    is: TokenType.IS,
     join: TokenType.JOIN,
+    left: TokenType.LEFT,
+    like: TokenType.LIKE,
     limit: TokenType.LIMIT,
-    nil: TokenType.NIL,
+    null: TokenType.NULL,
     not: TokenType.NOT,
     on: TokenType.ON,
     or: TokenType.OR,
     order: TokenType.ORDER,
+    outer: TokenType.OUTER,
     rename: TokenType.RENAME,
+    right: TokenType.RIGHT,
     select: TokenType.SELECT,
     set: TokenType.SET,
+    struct: TokenType.STRUCT,
     table: TokenType.TABLE,
     temp: TokenType.TEMP,
     then: TokenType.THEN,
+    timestamp: TokenType.TIMESTAMP,
     true: TokenType.TRUE,
     union: TokenType.UNION,
     where: TokenType.WHERE,
@@ -159,7 +194,13 @@ export class Lexer {
       case '[': this.addToken(TokenType.LEFT_BRACKET); break;
       case ']': this.addToken(TokenType.RIGHT_BRACKET); break;
       case ',': this.addToken(TokenType.COMMA); break;
-      case '.': this.addToken(TokenType.DOT); break;
+      case '.':
+        if (this.isDigit(this.peek())) {
+          this.number();
+        } else {
+          this.addToken(TokenType.DOT);
+        }
+        break;
       case '-':
         if (this.match('-')) {
           // A comment goes until the end of the line.
@@ -171,6 +212,10 @@ export class Lexer {
       case '+': this.addToken(TokenType.PLUS); break;
       case ';': this.addToken(TokenType.SEMICOLON); break;
       case '*': this.addToken(TokenType.STAR); break;
+      case '#':
+        // A comment goes until the end of the line.
+        while (this.peek() !== '\n' && !this.isAtEnd()) this.advance();
+        break;
       case '!':
         this.addToken(this.match('=') ? TokenType.BANG_EQUAL : TokenType.BANG);
         break;
@@ -178,14 +223,31 @@ export class Lexer {
         this.addToken(this.match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
         break;
       case '<':
-        this.addToken(this.match('=') ? TokenType.LESS_EQUAL : TokenType.LESS);
+        if (this.match('=')) {
+          this.addToken(TokenType.LESS_EQUAL);
+        } else if (this.match('>')) {
+          this.addToken(TokenType.LESS_GREATER);
+        } else if (this.match('<')) {
+          this.addToken(TokenType.SHIFT_LEFT);
+        }
+        else {
+          this.addToken(TokenType.LESS);
+        }
         break;
       case '>':
-        this.addToken(this.match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER);
+        if (this.match('=')) {
+          this.addToken(TokenType.GREATER_EQUAL);
+        } else if (this.match('>')) {
+          this.addToken(TokenType.SHIFT_RIGHT);
+        } else {
+          this.addToken(TokenType.GREATER);
+        }
         break;
       case '|':
         if (this.match('>')) {
           this.addToken(TokenType.PIPE_GREATER);
+        } else if (this.match('|')) {
+          this.addToken(TokenType.PIPE_PIPE);
         } else {
           this.addToken(TokenType.PIPE);
         }
@@ -196,7 +258,10 @@ export class Lexer {
           while (this.peek() !== '\n' && !this.isAtEnd()) this.advance();
         } else if (this.match('*')) {
           // A block comment goes until the closing */
-          while (this.peek() !== '*' && this.peekNext() !== '/' && !this.isAtEnd()) {
+          while (this.peek() !== '*' || this.peekNext() !== '/') {
+            if (this.isAtEnd()) {
+              throw new Error(`[line ${this.line}] Error: Unterminated block comment.`);
+            }
             if (this.peek() === '\n') {
               this.line++;
               this.col = 0;
@@ -210,6 +275,9 @@ export class Lexer {
           this.addToken(TokenType.SLASH);
         }
         break;
+      case '&': this.addToken(TokenType.AMPERSAND); break;
+      case '^': this.addToken(TokenType.CARET); break;
+      case '~': this.addToken(TokenType.TILDE); break;
 
       case ' ':
       case '\r':
@@ -226,6 +294,10 @@ export class Lexer {
       case "'":
         this.string(c);
         break;
+      
+      case '`':
+        this.quotedIdentifier();
+        break;
 
       default:
         if (this.isDigit(c)) {
@@ -233,8 +305,7 @@ export class Lexer {
         } else if (this.isAlpha(c)) {
           this.identifier();
         } else {
-          // TODO: Error handling
-          console.error(`[line ${this.line}] Error: Unexpected character.`);
+          throw new Error(`[line ${this.line}] Error: Unexpected character: ${c}`);
         }
         break;
     }
@@ -277,7 +348,38 @@ export class Lexer {
   }
 
   private string(quote: string): void {
+    let value = '';
     while (this.peek() !== quote && !this.isAtEnd()) {
+      let char = this.peek();
+      if (char === '\\') {
+        this.advance(); // Consume the backslash
+        if (this.isAtEnd()) {
+          throw new Error(`[line ${this.line}] Error: Unterminated string.`);
+        }
+        const nextChar = this.peek();
+        if (nextChar === quote || nextChar === '\\') {
+          char = nextChar;
+        } else {
+          // Not a valid escape sequence, treat as literal backslash
+          char = '\\' + nextChar;
+        }
+      }
+      value += char;
+      this.advance();
+    }
+
+    if (this.isAtEnd()) {
+      throw new Error(`[line ${this.line}] Error: Unterminated string.`);
+    }
+
+    // The closing ".
+    this.advance();
+
+    this.addToken(TokenType.STRING, value);
+  }
+
+  private quotedIdentifier(): void {
+    while (this.peek() !== '`' && !this.isAtEnd()) {
       if (this.peek() === '\n') {
         this.line++;
         this.col = 0;
@@ -286,17 +388,15 @@ export class Lexer {
     }
 
     if (this.isAtEnd()) {
-      // TODO: Error handling
-      console.error(`[line ${this.line}] Error: Unterminated string.`);
-      return;
+      throw new Error(`[line ${this.line}] Error: Unterminated quoted identifier.`);
     }
 
-    // The closing ".
+    // The closing `.
     this.advance();
 
-    // Trim the surrounding quotes.
+    // Trim the surrounding backticks.
     const value = this.source.substring(this.start + 1, this.current - 1);
-    this.addToken(TokenType.STRING, value);
+    this.addToken(TokenType.IDENTIFIER, value);
   }
 
   private isDigit(c: string): boolean {
@@ -311,6 +411,18 @@ export class Lexer {
       // Consume the "."
       this.advance();
 
+      while (this.isDigit(this.peek())) this.advance();
+    }
+    
+    // Look for an exponent part.
+    if (this.peek().toLowerCase() === 'e') {
+      this.advance();
+      if (this.peek() === '+' || this.peek() === '-') {
+        this.advance();
+      }
+      if (!this.isDigit(this.peek())) {
+        throw new Error(`[line ${this.line}] Error: Invalid number format, expected digit after exponent.`);
+      }
       while (this.isDigit(this.peek())) this.advance();
     }
 
