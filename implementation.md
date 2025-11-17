@@ -374,6 +374,248 @@ for (const user of users) {
     -   The `ON` condition will be parsed to determine the join keys.
     -   For performance, it may be beneficial to create a lookup map (hash table) from the join key to the rows of one of the datasets.
 
+#### `SET`
+
+The `SET` operator is used to define a temporary, named result set that can be used in subsequent operations. This is useful for breaking down complex queries into logical steps.
+
+-   **Syntax:** `|> SET <variable_name>`
+-   **Functionality:** Assigns the current result set to a variable.
+-   **Input:** An array of JSON objects.
+-   **Output:** The same array of JSON objects, but also stored in a named variable for later use.
+
+**Pseudo-code Example:**
+
+```typescript
+const users = [
+  { id: 1, name: 'Alice', age: 30 },
+  { id: 2, name: 'Bob', age: 25 },
+];
+
+// Query: FROM users |> WHERE age > 28 |> SET senior_users
+const senior_users = users.filter(user => user.age > 28);
+
+// `senior_users` would be:
+// [
+//   { id: 1, name: 'Alice', age: 30 },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The interpreter will maintain a map of named variables.
+    -   When a `SET` operation is encountered, the current state of the data will be stored in this map with the given name.
+    -   Subsequent `FROM` clauses can then reference this named result set.
+
+#### `RENAME`
+
+The `RENAME` operator is used to change the names of columns.
+
+-   **Syntax:** `|> RENAME <old_name> AS <new_name>, ...`
+-   **Functionality:** Renames one or more columns in the dataset.
+-   **Input:** An array of JSON objects.
+-   **Output:** A new array of JSON objects with the specified columns renamed.
+
+**Pseudo-code Example:**
+
+```typescript
+const inputData = [
+  { user_id: 1, user_name: 'Alice' },
+  { user_id: 2, user_name: 'Bob' },
+];
+
+// Query: |> RENAME user_id AS id, user_name AS name
+const result = inputData.map(row => ({
+  id: row.user_id,
+  name: row.user_name,
+}));
+
+// `result` would be:
+// [
+//   { id: 1, name: 'Alice' },
+//   { id: 2, name: 'Bob' },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The `RENAME` operator will iterate over each object in the input array.
+    -   For each object, it will create a new object, copying all properties but renaming the specified ones.
+
+#### `AS`
+
+The `AS` operator is similar to `SET`, but it's used to create a named alias for the entire result of a subquery expression. It allows you to assign a name to the output of a series of pipe operations.
+
+-   **Syntax:** `( <subquery> ) AS <alias_name>`
+-   **Functionality:** Assigns an alias to the result of a subquery. This is conceptually similar to `SET`, but is used to name a subquery expression.
+-   **Input:** An array of JSON objects.
+-   **Output:** The same array of JSON objects, which can now be referenced by the alias.
+
+**Pseudo-code Example:**
+
+```typescript
+const dataContext = {
+  users: [
+    { id: 1, name: 'Alice', age: 30 },
+    { id: 2, name: 'Bob', age: 25 },
+  ],
+};
+
+// Query: (FROM users |> WHERE age > 28) AS senior_users
+const senior_users = dataContext.users.filter(user => user.age > 28);
+
+// `senior_users` can now be used in other parts of a larger query.
+```
+
+-   **Implementation Details:**
+    -   The parser needs to handle parentheses to group a subquery.
+    -   Like `SET`, the interpreter will store the result in a named variable map. The distinction between `AS` and `SET` is more semantic; `SET` is a pipe operator, while `AS` is often used to name a subquery result.
+
+#### `DISTINCT`
+
+The `DISTINCT` operator removes duplicate rows from the dataset.
+
+-   **Syntax:** `|> DISTINCT [ON (<column1>, <column2>, ...)]`
+-   **Functionality:** Returns a set of unique rows. If columns are specified with `ON`, uniqueness is determined by the combination of values in those columns.
+-   **Input:** An array of JSON objects.
+-   **Output:** A new array of JSON objects with duplicate rows removed.
+
+**Pseudo-code Example (all columns):**
+
+```typescript
+const inputData = [
+  { name: 'Alice', age: 30 },
+  { name: 'Bob', age: 25 },
+  { name: 'Alice', age: 30 },
+];
+
+// Query: |> DISTINCT
+const result = [...new Map(inputData.map(item => [JSON.stringify(item), item])).values()];
+
+
+// `result` would be:
+// [
+//   { name: 'Alice', age: 30 },
+//   { name: 'Bob', age: 25 },
+// ]
+```
+
+**Pseudo-code Example (on specific columns):**
+
+```typescript
+const inputData = [
+  { name: 'Alice', age: 30, city: 'New York' },
+  { name: 'Bob', age: 25, city: 'London' },
+  { name: 'Alice', age: 35, city: 'Paris' },
+];
+
+// Query: |> DISTINCT ON (name)
+const seen = new Set();
+const result = inputData.filter(row => {
+  if (seen.has(row.name)) {
+    return false;
+  } else {
+    seen.add(row.name);
+    return true;
+  }
+});
+
+// `result` would be (first occurrence kept):
+// [
+//   { name: 'Alice', age: 30, city: 'New York' },
+//   { name: 'Bob', age: 25, city: 'London' },
+// ]
+```
+
+-   **Implementation Details:**
+    -   If no columns are specified, the operator can serialize each entire object to a string to check for uniqueness.
+    -   If columns are specified with `ON`, a composite key can be created from the values of those columns for each row to track uniqueness. A `Set` is efficient for this.
+
+#### `UNION`
+
+The `UNION` operator combines the result sets of two or more `SELECT` statements. By default, `UNION` removes duplicate rows. `UNION ALL` includes all rows.
+
+-   **Syntax:** `( <query1> ) UNION [ALL] ( <query2> )`
+-   **Functionality:** Combines two datasets vertically.
+-   **Input:** Two arrays of JSON objects.
+-   **Output:** A single array of JSON objects containing rows from both inputs.
+
+**Pseudo-code Example:**
+
+```typescript
+const developers = [
+  { name: 'Alice', role: 'developer' },
+  { name: 'Bob', role: 'developer' },
+];
+
+const managers = [
+  { name: 'Charlie', role: 'manager' },
+  { name: 'Alice', role: 'developer' }, // Duplicate
+];
+
+// Query: (FROM developers) UNION (FROM managers)
+const combined = [...developers, ...managers];
+const result = [...new Map(combined.map(item => [JSON.stringify(item), item])).values()];
+
+// `result` (without duplicates):
+// [
+//   { name: 'Alice', role: 'developer' },
+//   { name: 'Bob', role: 'developer' },
+//   { name: 'Charlie', role: 'manager' },
+// ]
+
+// Query: (FROM developers) UNION ALL (FROM managers)
+const resultAll = [...developers, ...managers];
+// `resultAll` (with duplicates):
+// [
+//   { name: 'Alice', role: 'developer' },
+//   { name: 'Bob', role: 'developer' },
+//   { name: 'Charlie', role: 'manager' },
+//   { name: 'Alice', role: 'developer' },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The implementation will first execute the two subqueries independently.
+    -   It will then concatenate the two result arrays.
+    -   If `UNION ALL` is not used, it will then perform a `DISTINCT` operation on the combined result.
+    -   The two datasets must have the same number of columns and compatible data types.
+
+#### `EXCEPT`
+
+The `EXCEPT` operator returns the rows from the first query that are not present in the second query.
+
+-   **Syntax:** `( <query1> ) EXCEPT ( <query2> )`
+-   **Functionality:** Returns the set difference between two datasets.
+-   **Input:** Two arrays of JSON objects.
+-   **Output:** An array of JSON objects containing only the rows from the first dataset that are not in the second.
+
+**Pseudo-code Example:**
+
+```typescript
+const all_employees = [
+  { name: 'Alice' },
+  { name: 'Bob' },
+  { name: 'Charlie' },
+];
+
+const developers = [
+  { name: 'Alice' },
+  { name: 'Bob' },
+];
+
+// Query: (FROM all_employees) EXCEPT (FROM developers)
+const developerNames = new Set(developers.map(dev => JSON.stringify(dev)));
+const result = all_employees.filter(emp => !developerNames.has(JSON.stringify(emp)));
+
+// `result` would be:
+// [
+//   { name: 'Charlie' },
+// ]
+```
+
+-   **Implementation Details:**
+    -   Execute the two subqueries.
+    -   Create a `Set` of the stringified objects from the second result for efficient lookup.
+    -   Filter the first result array, keeping only the rows that are not in the `Set`.
+
 ### Phase 4: Public API
 
 The public API will be the entry point for users of the library.
