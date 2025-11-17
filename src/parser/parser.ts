@@ -17,6 +17,18 @@ import {
   AggregateStmt,
   AggregateColumn,
   Call,
+  ExtendStmt,
+  RenameStmt,
+  OrderByStmt,
+  LimitStmt,
+  DistinctStmt,
+  JoinStmt,
+  UnionStmt,
+  ExceptStmt,
+  Get,
+  AsStmt,
+  CallStmt,
+  SetStmt,
 } from './ast';
 
 class ParseError extends Error {}
@@ -65,6 +77,39 @@ export class Parser {
         case TokenType.AGGREGATE:
             this.advance();
             return this.aggregateStatement();
+        case TokenType.EXTEND:
+            this.advance();
+            return this.extendStatement();
+        case TokenType.RENAME:
+            this.advance();
+            return this.renameStatement();
+        case TokenType.ORDER:
+            this.advance();
+            return this.orderByStatement();
+        case TokenType.LIMIT:
+            this.advance();
+            return this.limitStatement();
+        case TokenType.DISTINCT:
+            this.advance();
+            return this.distinctStatement();
+        case TokenType.JOIN:
+            this.advance();
+            return this.joinStatement();
+        case TokenType.UNION:
+            this.advance();
+            return this.unionStatement();
+        case TokenType.EXCEPT:
+            this.advance();
+            return this.exceptStatement();
+        case TokenType.SET:
+            this.advance();
+            return this.setStatement();
+        case TokenType.AS:
+            this.advance();
+            return this.asStatement();
+        case TokenType.CALL:
+            this.advance();
+            return this.callStatement();
         default:
             throw this.error(this.peek(), 'Unsupported pipe operator.');
     }
@@ -119,6 +164,105 @@ export class Parser {
     }
 
     return new AggregateStmt(columns, groupBy);
+  }
+
+  private extendStatement(): Stmt {
+    const columns: SelectColumn[] = [];
+
+    do {
+      const expression = this.expression();
+      let alias = null;
+      if (this.match(TokenType.AS)) {
+        alias = this.consume(TokenType.IDENTIFIER, "Expect alias after 'AS'.");
+      }
+      columns.push({ expression, alias });
+    } while (this.match(TokenType.COMMA));
+
+    return new ExtendStmt(columns);
+  }
+
+  private renameStatement(): Stmt {
+    const renames: { from: Token; to: Token }[] = [];
+
+    do {
+      const from = this.consume(TokenType.IDENTIFIER, 'Expect column name to rename.');
+      this.consume(TokenType.AS, "Expect 'AS' after column name.");
+      const to = this.consume(TokenType.IDENTIFIER, 'Expect new column name.');
+      renames.push({ from, to });
+    } while (this.match(TokenType.COMMA));
+
+    return new RenameStmt(renames);
+  }
+
+  private orderByStatement(): Stmt {
+    const columns: { expression: Expr; direction: Token | null }[] = [];
+    this.consume(TokenType.BY, "Expect 'BY' after 'ORDER'.");
+    do {
+      const expression = this.expression();
+      let direction = null;
+      if (this.match(TokenType.IDENTIFIER)) {
+        const token = this.previous();
+        if (token.lexeme.toLowerCase() === 'asc' || token.lexeme.toLowerCase() === 'desc') {
+            direction = token;
+        }
+      }
+      columns.push({ expression, direction });
+    } while (this.match(TokenType.COMMA));
+
+    return new OrderByStmt(columns);
+  }
+
+  private limitStatement(): Stmt {
+    const count = this.expression();
+    let offset = null;
+    if (this.match(TokenType.IDENTIFIER)) {
+      offset = this.expression();
+    }
+    return new LimitStmt(count, offset);
+  }
+
+  private distinctStatement(): Stmt {
+    return new DistinctStmt();
+  }
+
+  private joinStatement(): Stmt {
+    const table = this.consume(TokenType.IDENTIFIER, 'Expect table name.');
+    this.consume(TokenType.ON, "Expect 'ON' after table name.");
+    const on = this.equality();
+    return new JoinStmt(table, on);
+  }
+
+  private unionStatement(): Stmt {
+    const table = this.consume(TokenType.IDENTIFIER, 'Expect table name.');
+    return new UnionStmt(table);
+  }
+
+  private exceptStatement(): Stmt {
+    const table = this.consume(TokenType.IDENTIFIER, 'Expect table name.');
+    return new ExceptStmt(table);
+  }
+
+  private setStatement(): Stmt {
+    const name = this.consume(TokenType.IDENTIFIER, 'Expect variable name.');
+    return new SetStmt(name);
+  }
+
+  private asStatement(): Stmt {
+    const name = this.consume(TokenType.IDENTIFIER, 'Expect alias name.');
+    return new AsStmt(name);
+  }
+
+  private callStatement(): Stmt {
+    const name = this.consume(TokenType.IDENTIFIER, 'Expect function name.');
+    this.consume(TokenType.LEFT_PAREN, "Expect '(' after function name.");
+    const args: Expr[] = [];
+    if (!this.check(TokenType.RIGHT_PAREN)) {
+      do {
+        args.push(this.expression());
+      } while (this.match(TokenType.COMMA));
+    }
+    this.consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.");
+    return new CallStmt(name, args);
   }
 
   private expressionStatement(): Stmt {
@@ -201,6 +345,12 @@ export class Parser {
     while (true) {
       if (this.match(TokenType.LEFT_PAREN)) {
         expr = this.finishCall(expr);
+      } else if (this.match(TokenType.DOT)) {
+        const name = this.consume(
+          TokenType.IDENTIFIER,
+          "Expect property name after '.'."
+        );
+        expr = new Get(expr, name);
       } else {
         break;
       }

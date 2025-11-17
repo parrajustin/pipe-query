@@ -76,3 +76,110 @@ export function aggregate(
 
   return result;
 }
+
+export function join(
+    left: DataTable,
+    right: DataTable,
+    on: Expr,
+    evaluate: Evaluator
+): DataTable {
+    const result: DataTable = [];
+    left.forEach(leftRow => {
+        right.forEach(rightRow => {
+            if (evaluate(on, { ...leftRow, ...rightRow })) {
+                result.push({ ...leftRow, ...rightRow });
+            }
+        });
+    });
+    return result;
+}
+
+export function union(
+    left: DataTable,
+    right: DataTable
+): DataTable {
+    return [...left, ...right];
+}
+
+export function except(
+    left: DataTable,
+    right: DataTable
+): DataTable {
+    const rightKeys = new Set(right.map(row => JSON.stringify(row)));
+    return left.filter(row => !rightKeys.has(JSON.stringify(row)));
+}
+
+export function orderBy(
+    table: DataTable,
+    columns: { expression: Expr; direction: Token | null }[],
+    evaluate: Evaluator
+): DataTable {
+    const sorted = [...table];
+    sorted.sort((a, b) => {
+        for (const col of columns) {
+            const aValue = evaluate(col.expression, a);
+            const bValue = evaluate(col.expression, b);
+            const direction = col.direction?.lexeme.toLowerCase() === 'desc' ? -1 : 1;
+            if (aValue < bValue) {
+                return -1 * direction;
+            }
+            if (aValue > bValue) {
+                return 1 * direction;
+            }
+        }
+        return 0;
+    });
+    return sorted;
+}
+
+export function limit(
+    table: DataTable,
+    count: number,
+    offset: number | null
+): DataTable {
+    const start = offset || 0;
+    return table.slice(start, start + count);
+}
+
+export function distinct(
+    table: DataTable
+): DataTable {
+    const unique = new Map<string, DataRow>();
+    table.forEach(row => {
+        const key = JSON.stringify(row);
+        if (!unique.has(key)) {
+            unique.set(key, row);
+        }
+    });
+    return Array.from(unique.values());
+}
+
+export function extend(
+    table: DataTable,
+    columns: { expression: Expr; alias: Token | null }[],
+    evaluate: Evaluator
+): DataTable {
+    return table.map(row => {
+        const newRow = { ...row };
+        columns.forEach(col => {
+            const value = evaluate(col.expression, row);
+            const name = col.alias ? col.alias.lexeme : 'computed';
+            newRow[name] = value;
+        });
+        return newRow;
+    });
+}
+
+export function rename(
+    table: DataTable,
+    renames: { from: Token; to: Token }[]
+): DataTable {
+    return table.map(row => {
+        const newRow = { ...row };
+        renames.forEach(r => {
+            newRow[r.to.lexeme] = newRow[r.from.lexeme];
+            delete newRow[r.from.lexeme];
+        });
+        return newRow;
+    });
+}

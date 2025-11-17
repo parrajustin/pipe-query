@@ -17,8 +17,20 @@ import {
   Call,
   Logical,
   AggregateStmt,
+  ExtendStmt,
+  RenameStmt,
+  OrderByStmt,
+  LimitStmt,
+  DistinctStmt,
+  JoinStmt,
+  UnionStmt,
+  ExceptStmt,
+  Get,
+  AsStmt,
+  CallStmt,
+  SetStmt,
 } from '../parser/ast';
-import { DataContext, DataTable, DataRow, from, select, where, aggregate } from './operators';
+import { DataContext, DataTable, DataRow, from, select, where, aggregate, extend, rename, orderBy, limit, distinct, join, union, except } from './operators';
 import { TokenType } from '../parser/lexer';
 
 export class Interpreter implements StmtVisitor<void>, ExprVisitor<any> {
@@ -52,12 +64,12 @@ export class Interpreter implements StmtVisitor<void>, ExprVisitor<any> {
   }
 
   visitSelectStmt(stmt: SelectStmt): void {
-    const evaluator = (expr: Expr, row: DataRow) => this.evaluate(expr, row);
+    const evaluator = (expr: Expr, row: DataRow) => this.evaluate(expr, row, this.dataContext);
     this.currentTable = select(this.currentTable, stmt.columns, evaluator);
   }
 
   visitWhereStmt(stmt: WhereStmt): void {
-    const evaluator = (expr: Expr, row: DataRow) => this.evaluate(expr, row);
+    const evaluator = (expr: Expr, row: DataRow) => this.evaluate(expr, row, this.dataContext);
     this.currentTable = where(this.currentTable, stmt.condition, evaluator);
   }
 
@@ -66,7 +78,7 @@ export class Interpreter implements StmtVisitor<void>, ExprVisitor<any> {
   }
 
   visitAggregateStmt(stmt: AggregateStmt): void {
-    const evaluator = (expr: Expr, row: DataRow) => this.evaluate(expr, row);
+    const evaluator = (expr: Expr, row: DataRow) => this.evaluate(expr, row, this.dataContext);
     this.currentTable = aggregate(
       this.currentTable,
       stmt.columns,
@@ -75,16 +87,62 @@ export class Interpreter implements StmtVisitor<void>, ExprVisitor<any> {
     );
   }
 
-  private evaluate(expr: Expr, row: DataRow): any {
-    return expr.accept(this, row);
+  visitExtendStmt(stmt: ExtendStmt): void {
+    const evaluator = (expr: Expr, row: DataRow) => this.evaluate(expr, row, this.dataContext);
+    this.currentTable = extend(this.currentTable, stmt.columns, evaluator);
+  }
+
+  visitRenameStmt(stmt: RenameStmt): void {
+    this.currentTable = rename(this.currentTable, stmt.renames);
+  }
+
+  visitOrderByStmt(stmt: OrderByStmt): void {
+    const evaluator = (expr: Expr, row: DataRow) => this.evaluate(expr, row, this.dataContext);
+    this.currentTable = orderBy(this.currentTable, stmt.columns, evaluator);
+  }
+
+  visitLimitStmt(stmt: LimitStmt): void {
+    const count = this.evaluate(stmt.count, {}, this.dataContext);
+    const offset = stmt.offset ? this.evaluate(stmt.offset, {}, this.dataContext) : null;
+    this.currentTable = limit(this.currentTable, count, offset);
+  }
+
+  visitDistinctStmt(stmt: DistinctStmt): void {
+    this.currentTable = distinct(this.currentTable);
+  }
+
+  visitJoinStmt(stmt: JoinStmt): void {
+    const right = from(this.dataContext, stmt.table.lexeme);
+    const evaluator = (expr: Expr, row: DataRow) => this.evaluate(expr, row, this.dataContext);
+    this.currentTable = join(this.currentTable, right, stmt.on, evaluator);
+  }
+
+  visitUnionStmt(stmt: UnionStmt): void {
+    const right = from(this.dataContext, stmt.table.lexeme);
+    this.currentTable = union(this.currentTable, right);
+  }
+
+  visitExceptStmt(stmt: ExceptStmt): void {
+    const right = from(this.dataContext, stmt.table.lexeme);
+    this.currentTable = except(this.currentTable, right);
+  }
+
+  private evaluate(expr: Expr, row: DataRow, dataContext: DataContext): any {
+    return expr.accept(this, row, dataContext);
   }
 
   visitLiteralExpr(expr: Literal, row?: any): any {
     return expr.value;
   }
 
-  visitVariableExpr(expr: Variable, row?: any): any {
-    return row[expr.name.lexeme];
+  visitVariableExpr(expr: Variable, row?: any, dataContext?: DataContext): any {
+    if (row && expr.name.lexeme in row) {
+        return row[expr.name.lexeme];
+    }
+    if (dataContext && expr.name.lexeme in dataContext) {
+        return dataContext[expr.name.lexeme];
+    }
+    return null;
   }
 
   visitUnaryExpr(expr: Unary, row?: any): any {
@@ -145,4 +203,37 @@ export class Interpreter implements StmtVisitor<void>, ExprVisitor<any> {
       // Not implemented yet
       return null;
   }
+
+  visitGetExpr(expr: Get, row?: any, dataContext?: any): any {
+    const object = this.evaluate(expr.object, row, dataContext);
+    if (object && typeof object === 'object' && expr.name.lexeme in object) {
+      return object[expr.name.lexeme];
+    } else if (row && typeof row === 'object' && expr.name.lexeme in row) {
+        return row[expr.name.lexeme];
+    }
+    return null;
+  }
+
+  visitSetStmt(stmt: SetStmt): void {
+    const value = this.evaluate(stmt.value, {}, this.dataContext);
+    this.dataContext[stmt.name.lexeme] = value;
+  }
+
+
+  visitAsStmt(stmt: AsStmt): void {
+    const table = this.interpret(stmt.query, this.dataContext);
+    this.dataContext[stmt.name.lexeme] = table;
+  }
+
+  visitCallStmt(stmt: CallStmt): void {
+    // Not implemented yet
+  }
+
+    visitSetStmt(stmt: SetStmt): void {
+        this.dataContext[stmt.name.lexeme] = this.currentTable;
+    }
+
+    visitAsStmt(stmt: AsStmt): void {
+        this.dataContext[stmt.name.lexeme] = this.currentTable;
+    }
 }
