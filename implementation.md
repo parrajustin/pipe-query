@@ -69,10 +69,15 @@ This section provides a detailed breakdown of each pipe operator's functionality
 
 #### `FROM`
 
-The `FROM` clause is the starting point of any query. It specifies the initial dataset to be processed. In this library, the `FROM` clause will reference a key in a provided JSON object that contains arrays of data.
+The `FROM` clause is the starting point of any query, specifying the initial dataset. The data can be provided in two ways: either from a static JSON object (a "data context") or dynamically through a "data provider."
 
 -   **Syntax:** `FROM <data_source>`
--   **Functionality:** Initializes the data pipeline with the specified dataset.
+-   **Functionality:** Initializes the data pipeline with the specified dataset, sourced from either a static object or a dynamic provider.
+
+##### 1. From a Static Data Context
+
+This approach is suitable for when all the data is already present in memory. The `FROM` clause references a key in a provided JSON object that holds the data arrays.
+
 -   **Input:** A JSON object containing named arrays of data.
 -   **Output:** The initial array of data to be processed.
 
@@ -96,17 +101,85 @@ const query = `FROM users`;
 
 // The processor would extract the 'users' array from the dataContext
 const initialData = dataContext['users'];
+```
 
-// `initialData` would be:
-// [
-//   { id: 1, name: 'Alice', age: 30 },
-//   { id: 2, name: 'Bob', age: 25 },
-// ]
+-   **Implementation Details:**
+    -   The interpreter will use the identifier from the `FROM` clause to look up the data array in the provided data context object.
+
+##### 2. From a Data Provider
+
+A data provider is a function that retrieves data on demand. This is useful for fetching data from external sources, like a database or an API, or for handling large datasets that can be streamed.
+
+-   **Input:** A `DataProvider` function that takes a data source name and returns the data, either all at once or as a stream.
+-   **Output:** The initial stream or array of data to be processed.
+
+**`DataProvider` Interface:**
+
+```typescript
+interface DataProvider {
+  (dataSourceName: string): Promise<any[]> | AsyncIterable<any>;
+}
+```
+
+**Pseudo-code Example (Batch Data):**
+
+This example shows a data provider that fetches a full dataset from a mock API.
+
+```typescript
+// The data provider fetches data and returns it as a promise
+const myDataProvider: DataProvider = async (tableName) => {
+  if (tableName === 'products') {
+    // In a real scenario, this would be a fetch call to an API
+    return Promise.resolve([
+      { id: 10, name: 'Laptop', price: 1200 },
+      { id: 20, name: 'Mouse', price: 50 },
+    ]);
+  }
+  throw new Error(`Unknown table: ${tableName}`);
+};
+
+// The query string
+const query = `FROM products`;
+
+// The processor would invoke the data provider with 'products'
+const initialData = await myDataProvider('products');
+```
+
+**Pseudo-code Example (Streaming Data):**
+
+This example demonstrates how a data provider can stream data, which is ideal for large datasets.
+
+```typescript
+import { Readable } from 'stream';
+
+// The data provider returns an async iterable (e.g., a Node.js stream)
+const myStreamingProvider: DataProvider = (tableName) => {
+  if (tableName === 'logs') {
+    const logStream = new Readable({ objectMode: true });
+    logStream.push({ level: 'info', message: 'User logged in' });
+    logStream.push({ level: 'error', message: 'Database connection failed' });
+    logStream.push(null); // End of stream
+    return logStream;
+  }
+  throw new Error(`Unknown table: ${tableName}`);
+};
+
+// The query string
+const query = `FROM logs`;
+
+// The processor would handle the stream from the provider
+const dataStream = myStreamingProvider('logs');
+
+// The query processor would need to be designed to handle streams,
+// processing each chunk of data as it arrives.
 ```
 
 -   **Implementation Details:**
     -   The `FROM` clause will be the first part of the AST.
-    -   The interpreter will use the identifier from the `FROM` clause to look up the corresponding data array in the input data context.
+    -   The interpreter will first check if a `DataProvider` is available.
+    -   If a provider exists, it will be called with the data source name from the `FROM` clause.
+    -   The interpreter must be able to handle both a `Promise` (for batch data) and an `AsyncIterable` (for streaming data).
+    -   If no data provider is given, it will fall back to looking up the data source name in the static data context object.
 
 #### `SELECT`
 
@@ -618,39 +691,84 @@ const result = all_employees.filter(emp => !developerNames.has(JSON.stringify(em
 
 ### Phase 4: Public API
 
-The public API will be the entry point for users of the library.
+The public API is the entry point for executing queries. It is designed to be flexible, supporting both static in-memory data and dynamic data providers.
 
 1.  **Main Function (`index.ts`):**
-    -   Expose a main function, e.g., `createQueryProcessor`, which takes a pipe query string.
-    -   This function will parse the query and return a "processor" function.
-    -   The processor function will take the data (e.g., a JSON array) and return the result.
+    -   Expose a main function, `createQueryProcessor`, which takes the pipe query string and an optional configuration object.
+    -   This function parses the query and returns a processor function.
+    -   The processor function takes the data context (if no data provider is used) and executes the query.
 
     ```typescript
-    import { createQueryProcessor } from 'pipe-query-library';
+    interface QueryProcessorOptions {
+      dataProvider?: DataProvider;
+    }
 
-    const query = `
-      FROM myData
-      |> WHERE category == 'fruit'
-      |> AGGREGATE COUNT(*) AS count GROUP BY item
-      |> ORDER BY count DESC
-    `;
-
-    const processor = createQueryProcessor(query);
-
-    const myData = [
-      { item: 'apples', sales: 2, category: 'fruit' },
-      { item: 'carrots', sales: 8, category: 'vegetable' },
-      { item: 'apples', sales: 7, category: 'fruit' },
-      { item: 'bananas', sales: 5, category: 'fruit' },
-    ];
-
-    const result = processor(myData);
-    // result would be:
-    // [
-    //   { item: 'apples', count: 2 },
-    //   { item: 'bananas', count: 1 },
-    // ]
+    function createQueryProcessor(query: string, options?: QueryProcessorOptions): (dataContext?: object) => Promise<any[]>;
     ```
+
+##### **Example 1: Using a Static Data Context**
+
+This is the simplest way to use the library, where the data is provided as a plain JavaScript object.
+
+```typescript
+import { createQueryProcessor } from 'pipe-query-library';
+
+const query = `
+  FROM users
+  |> WHERE age >= 30
+  |> SELECT name
+`;
+
+// Create the processor once
+const processor = createQueryProcessor(query);
+
+// Provide the data context when executing the query
+const dataContext = {
+  users: [
+    { name: 'Alice', age: 30 },
+    { name: 'Bob', age: 25 },
+    { name: 'Charlie', age: 35 },
+  ],
+};
+
+const result = await processor(dataContext);
+
+// result would be:
+// [
+//   { name: 'Alice' },
+//   { name: 'Charlie' },
+// ]
+```
+
+##### **Example 2: Using a Data Provider**
+
+When working with dynamic or large datasets, you can pass a `dataProvider` at creation time.
+
+```typescript
+import { createQueryProcessor } from 'pipe-query-library';
+
+const query = `
+  FROM products
+  |> WHERE price > 100
+  |> ORDER BY price DESC
+`;
+
+// Define a data provider that fetches data from an API
+const myDataProvider: DataProvider = async (tableName) => {
+  if (tableName === 'products') {
+    return fetch('/api/products').then(res => res.json());
+  }
+  throw new Error(`Unknown table: ${tableName}`);
+};
+
+// Create the processor with the data provider
+const processor = createQueryProcessor(query, { dataProvider: myDataProvider });
+
+// Execute the query (no need to pass data here, as the provider has it)
+const result = await processor();
+
+// `result` would contain products with a price greater than 100
+```
 
 ### Phase 5: Testing
 
