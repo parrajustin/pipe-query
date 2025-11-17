@@ -62,15 +62,317 @@ The processor (or interpreter) will take the AST and the input data and produce 
     -   For each `|>` operation in the AST, it will apply the corresponding data transformation.
 2.  **Operators (`operators.ts`):**
     -   Implement the logic for each supported pipe operator. Each operator will be a function that takes the current state of the data and returns the transformed data.
-    -   Initial operators to implement:
-        -   `FROM`: To specify the input data source.
-        -   `SELECT`: To choose and rename columns.
-        -   `WHERE`: To filter rows based on a condition.
-        -   `EXTEND`: To add new computed columns.
-        -   `AGGREGATE` (with `GROUP BY`): To perform aggregations.
-        -   `ORDER BY`: To sort the results.
-        -   `LIMIT`: To restrict the number of rows returned.
-        -   `JOIN`: To combine data from multiple sources.
+
+### Pipe Operators
+
+This section provides a detailed breakdown of each pipe operator's functionality, complete with TypeScript-like pseudo-code examples, to give a clear picture of how the library will work.
+
+#### `FROM`
+
+The `FROM` clause is the starting point of any query. It specifies the initial dataset to be processed. In this library, the `FROM` clause will reference a key in a provided JSON object that contains arrays of data.
+
+-   **Syntax:** `FROM <data_source>`
+-   **Functionality:** Initializes the data pipeline with the specified dataset.
+-   **Input:** A JSON object containing named arrays of data.
+-   **Output:** The initial array of data to be processed.
+
+**Pseudo-code Example:**
+
+```typescript
+// The main data object provided to the query processor
+const dataContext = {
+  users: [
+    { id: 1, name: 'Alice', age: 30 },
+    { id: 2, name: 'Bob', age: 25 },
+  ],
+  orders: [
+    { orderId: 101, userId: 1, amount: 150 },
+    { orderId: 102, userId: 2, amount: 200 },
+  ],
+};
+
+// The query string
+const query = `FROM users`;
+
+// The processor would extract the 'users' array from the dataContext
+const initialData = dataContext['users'];
+
+// `initialData` would be:
+// [
+//   { id: 1, name: 'Alice', age: 30 },
+//   { id: 2, name: 'Bob', age: 25 },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The `FROM` clause will be the first part of the AST.
+    -   The interpreter will use the identifier from the `FROM` clause to look up the corresponding data array in the input data context.
+
+#### `SELECT`
+
+The `SELECT` operator is used to specify which columns to include in the output, and to rename them.
+
+-   **Syntax:** `|> SELECT <column1> [AS <alias1>], <column2> [AS <alias2>], ...`
+-   **Functionality:** Transforms each row in the input data to a new object with only the specified columns.
+-   **Input:** An array of JSON objects.
+-   **Output:** A new array of JSON objects with the selected and aliased columns.
+
+**Pseudo-code Example:**
+
+```typescript
+const inputData = [
+  { id: 1, name: 'Alice', age: 30 },
+  { id: 2, name: 'Bob', age: 25 },
+];
+
+// Query: |> SELECT name AS userName, age
+const result = inputData.map(row => ({
+  userName: row.name,
+  age: row.age,
+}));
+
+// `result` would be:
+// [
+//   { userName: 'Alice', age: 30 },
+//   { userName: 'Bob', age: 25 },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The `SELECT` operator will iterate through each object in the input array.
+    -   For each object, it will create a new object, picking out only the properties specified in the `SELECT` clause.
+    -   If an `AS` alias is provided, the new property name will be the alias.
+
+#### `WHERE`
+
+The `WHERE` operator filters the data based on a boolean expression.
+
+-   **Syntax:** `|> WHERE <boolean_expression>`
+-   **Functionality:** Returns a subset of the rows from the input data that satisfy the condition.
+-   **Input:** An array of JSON objects.
+-   **Output:** A new array of JSON objects that pass the filter condition.
+
+**Pseudo-code Example:**
+
+```typescript
+const inputData = [
+  { name: 'Alice', age: 30 },
+  { name: 'Bob', age: 25 },
+  { name: 'Charlie', age: 35 },
+];
+
+// Query: |> WHERE age > 28
+const result = inputData.filter(row => row.age > 28);
+
+// `result` would be:
+// [
+//   { name: 'Alice', age: 30 },
+//   { name: 'Charlie', age: 35 },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The `WHERE` operator will evaluate the boolean expression for each row.
+    -   The expression parser will need to handle common operators (`==`, `!=`, `>`, `<`, `>=`, `<=`, `AND`, `OR`, `IN`).
+    -   It will return a new array containing only the rows for which the expression evaluates to `true`.
+
+#### `EXTEND`
+
+The `EXTEND` operator adds new columns to the dataset.
+
+-   **Syntax:** `|> EXTEND <expression> AS <new_column_name>`
+-   **Functionality:** Adds a new computed column to each row.
+-   **Input:** An array of JSON objects.
+-   **Output:** A new array of JSON objects with the new column added to each object.
+
+**Pseudo-code Example:**
+
+```typescript
+const inputData = [
+  { name: 'Alice', age: 30 },
+  { name: 'Bob', age: 25 },
+];
+
+// Query: |> EXTEND age * 2 AS doubleAge
+const result = inputData.map(row => ({
+  ...row,
+  doubleAge: row.age * 2,
+}));
+
+// `result` would be:
+// [
+//   { name: 'Alice', age: 30, doubleAge: 60 },
+//   { name: 'Bob', age: 25, doubleAge: 50 },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The `EXTEND` operator will iterate through each row of the input data.
+    -   For each row, it will evaluate the expression and add the result as a new property with the specified alias.
+    -   The expression parser must support arithmetic operations and functions.
+
+#### `AGGREGATE`
+
+The `AGGREGATE` operator performs summary calculations on the data, optionally grouped by one or more columns.
+
+-   **Syntax:** `|> AGGREGATE <agg_func>(<column>) AS <alias> [GROUP BY <group_column>]`
+-   **Functionality:** Aggregates data into a single row, or into groups of rows.
+-   **Input:** An array of JSON objects.
+-   **Output:** A new array of JSON objects with the aggregated results.
+
+**Pseudo-code Example (with `GROUP BY`):**
+
+```typescript
+const inputData = [
+  { category: 'fruit', sales: 10 },
+  { category: 'vegetable', sales: 20 },
+  { category: 'fruit', sales: 15 },
+];
+
+// Query: |> AGGREGATE SUM(sales) AS total_sales GROUP BY category
+const groups = {};
+inputData.forEach(row => {
+  if (!groups[row.category]) {
+    groups[row.category] = [];
+  }
+  groups[row.category].push(row);
+});
+
+const result = Object.keys(groups).map(key => ({
+  category: key,
+  total_sales: groups[key].reduce((sum, row) => sum + row.sales, 0),
+}));
+
+// `result` would be:
+// [
+//   { category: 'fruit', total_sales: 25 },
+//   { category: 'vegetable', total_sales: 20 },
+// ]
+```
+
+-   **Implementation Details:**
+    -   If `GROUP BY` is present, the operator will first group the data into buckets based on the grouping key.
+    -   It will then apply the aggregate function (`SUM`, `COUNT`, `AVG`, `MIN`, `MAX`, etc.) to each group.
+    -   If `GROUP BY` is not present, the aggregation will be performed over the entire dataset, returning a single row.
+
+#### `ORDER BY`
+
+The `ORDER BY` operator sorts the data based on one or more columns.
+
+-   **Syntax:** `|> ORDER BY <column1> [ASC|DESC], <column2> [ASC|DESC], ...`
+-   **Functionality:** Sorts the input array of objects.
+-   **Input:** An array of JSON objects.
+-   **Output:** A new array of JSON objects, sorted according to the specified columns and directions.
+
+**Pseudo-code Example:**
+
+```typescript
+const inputData = [
+  { name: 'Alice', age: 30 },
+  { name: 'Bob', age: 25 },
+  { name: 'Charlie', age: 30 },
+];
+
+// Query: |> ORDER BY age DESC, name ASC
+const result = inputData.sort((a, b) => {
+  if (a.age > b.age) return -1;
+  if (a.age < b.age) return 1;
+  if (a.name < b.name) return -1;
+  if (a.name > b.name) return 1;
+  return 0;
+});
+
+// `result` would be:
+// [
+//   { name: 'Alice', age: 30 },
+//   { name: 'Charlie', age: 30 },
+//   { name: 'Bob', age: 25 },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The `ORDER BY` operator will use a stable sort algorithm.
+    -   It will parse the list of columns and their sort directions (ascending or descending).
+    -   The comparison function will handle multiple sorting criteria in the specified order.
+
+#### `LIMIT`
+
+The `LIMIT` operator restricts the number of rows returned.
+
+-   **Syntax:** `|> LIMIT <count> [OFFSET <skip_rows>]`
+-   **Functionality:** Returns a slice of the input array.
+-   **Input:** An array of JSON objects.
+-   **Output:** A new, smaller array of JSON objects.
+
+**Pseudo-code Example:**
+
+```typescript
+const inputData = [
+  { name: 'Alice' },
+  { name: 'Bob' },
+  { name: 'Charlie' },
+  { name: 'David' },
+];
+
+// Query: |> LIMIT 2 OFFSET 1
+const result = inputData.slice(1, 1 + 2);
+
+// `result` would be:
+// [
+//   { name: 'Bob' },
+//   { name: 'Charlie' },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The `LIMIT` operator will use the `slice` method on the array.
+    -   The `OFFSET` is optional and defaults to 0.
+
+#### `JOIN`
+
+The `JOIN` operator combines rows from two datasets based on a related column between them.
+
+-   **Syntax:** `|> <join_type> JOIN <other_data_source> ON <condition>`
+-   **Functionality:** Merges two datasets.
+-   **Input:** An array of JSON objects (the left side of the join).
+-   **Output:** A new array of JSON objects containing the merged data.
+
+**Pseudo-code Example:**
+
+```typescript
+const users = [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+];
+
+const orders = [
+  { orderId: 101, userId: 1, item: 'Laptop' },
+  { orderId: 102, userId: 2, item: 'Mouse' },
+  { orderId: 103, userId: 1, item: 'Keyboard' },
+];
+
+// Query: FROM users |> JOIN orders ON users.id == orders.userId
+const result = [];
+for (const user of users) {
+  for (const order of orders) {
+    if (user.id === order.userId) {
+      result.push({ ...user, ...order });
+    }
+  }
+}
+
+// `result` would be:
+// [
+//   { id: 1, name: 'Alice', orderId: 101, userId: 1, item: 'Laptop' },
+//   { id: 1, name: 'Alice', orderId: 103, userId: 1, item: 'Keyboard' },
+//   { id: 2, name: 'Bob', orderId: 102, userId: 2, item: 'Mouse' },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The `JOIN` implementation will need to support `INNER JOIN`, `LEFT JOIN`, `RIGHT JOIN`, and `FULL OUTER JOIN`.
+    -   The `ON` condition will be parsed to determine the join keys.
+    -   For performance, it may be beneficial to create a lookup map (hash table) from the join key to the rows of one of the datasets.
 
 ### Phase 4: Public API
 
