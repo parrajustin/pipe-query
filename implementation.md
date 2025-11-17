@@ -951,6 +951,14 @@ const result = await processor();
 -   **Pipe Query Syntax Documentation:**
     -   [Google Cloud BigQuery Pipe Syntax](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax)
     -   [ZetaSQL Pipe Syntax on GitHub](https://github.com/google/zetasql/blob/master/docs/pipe-syntax.md)
+-   **BigQuery Standard SQL Reference:**
+    -   [Data Types](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/data-types)
+    -   [Lexical Structure and Syntax](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/lexical)
+    -   [Conversion Rules](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/conversion_rules)
+    -   [Format Elements](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/format-elements)
+    -   [Operators](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/operators)
+    -   [Conditional Expressions](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/conditional_expressions)
+    -   [Subqueries](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/subqueries)
 -   **Research Paper:**
     -   ["SQL Has Problems. We Can Fix Them: Pipe Syntax In SQL"](https://research.google/pubs/sql-has-problems-we-can-fix-them-pipe-syntax-in-sql/)
 -   **Parser and Compiler Theory:**
@@ -964,22 +972,198 @@ This section details the specific data types, functions, and expressions that th
 
 The library will support a core set of data types that are common in JSON and JavaScript environments.
 
-| Data Type | Description | Example |
-| :--- | :--- | :--- |
-| `STRING` | A sequence of characters. | `'hello'` |
-| `INTEGER` | A 64-bit signed integer. | `123` |
-| `FLOAT` | A 64-bit floating-point number. | `3.14` |
-| `BOOLEAN` | A true or false value. | `true` |
-| `ARRAY` | An ordered list of elements of the same type. | `[1, 2, 3]` |
-| `OBJECT` | A collection of key-value pairs (struct). | `{ "a": 1 }` |
-| `DATE` | A calendar date. | `DATE '2023-12-25'` |
-| `DATETIME` | A calendar date and time. | `DATETIME '2023-12-25 10:30:00'` |
-| `TIMESTAMP` | An exact point in time, with microsecond precision. | `TIMESTAMP '2023-12-25 10:30:00Z'` |
-| `NULL` | Represents a missing or undefined value. | `null` |
+#### Array Type
+- **Description:** An ordered list of zero or more elements of non-array values.
+- **SQL Type Name:** `ARRAY`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT [1, 2, 3] as numbers
+  const result = { numbers: [1, 2, 3] };
+  ```
 
--   **Implementation Details:**
-    -   The parser will need to recognize these data types, both as literals in expressions and potentially in `CAST` operations.
-    -   The interpreter will use the corresponding native JavaScript types for processing (e.g., `string`, `number`, `boolean`, `Array`, `Object`, `Date`).
+#### Boolean Type
+- **Description:** A value that can be either `TRUE` or `FALSE`.
+- **SQL Type Name:** `BOOL` (alias: `BOOLEAN`)
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT true as is_active
+  const result = { is_active: true };
+  ```
+
+#### Bytes Type
+- **Description:** Variable-length binary data.
+- **SQL Type Name:** `BYTES`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT b"hello" as bytes_data
+  const result = { bytes_data: Buffer.from("hello") };
+  ```
+
+#### Date Type
+- **Description:** A Gregorian calendar date, independent of time zone.
+- **SQL Type Name:** `DATE`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT DATE '2023-12-25' as christmas_date
+  const result = { christmas_date: new Date('2023-12-25T00:00:00Z') }; // Represented as a Date object at UTC midnight
+  ```
+
+#### Datetime Type
+- **Description:** A Gregorian date and a time, as they might be displayed on a watch, independent of time zone.
+- **SQL Type Name:** `DATETIME`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT DATETIME '2023-12-25 10:30:00' as some_datetime
+  const result = { some_datetime: new Date('2023-12-25T10:30:00') };
+  ```
+
+#### Geography Type
+- **Description:** A collection of points, linestrings, and polygons, which is represented as a point set, or a subset of the surface of the Earth.
+- **SQL Type Name:** `GEOGRAPHY`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT ST_GEOGPOINT(10, 20) as location
+  const result = { location: { type: 'Point', coordinates: [10, 20] } }; // Represented as a GeoJSON object
+  ```
+
+#### Interval Type
+- **Description:** A duration of time, without referring to any specific point in time.
+- **SQL Type Name:** `INTERVAL`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT INTERVAL 1 HOUR as one_hour
+  const result = { one_hour: { hours: 1 } }; // Represented as a duration object
+  ```
+
+#### JSON Type
+- **Description:** Represents JSON, a lightweight data-interchange format.
+- **SQL Type Name:** `JSON`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT JSON '{"a": 1}' as json_data
+  const result = { json_data: { a: 1 } };
+  ```
+
+#### Numeric Types
+- **Description:** A numeric value. Several types are supported.
+  - **INT64:** A 64-bit integer. (Aliases: `INT`, `SMALLINT`, `INTEGER`, `BIGINT`, `TINYINT`, `BYTEINT`)
+  - **NUMERIC:** A decimal value with a precision of 38 digits. (Alias: `DECIMAL`)
+  - **BIGNUMERIC:** A decimal value with a precision of 76.76 digits. (Alias: `BIGDECIMAL`)
+  - **FLOAT64:** An approximate double precision numeric value.
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT 123 as int_val, 123.45 as numeric_val, 1.23e6 as float_val
+  const result = { int_val: 123, numeric_val: 123.45, float_val: 1230000 };
+  ```
+
+#### Range Type
+- **Description:** Contiguous range between two dates, datetimes, or timestamps.
+- **SQL Type Name:** `RANGE`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT RANGE<DATE> '[2023-01-01, 2023-01-31)' as january
+  const result = { january: { start: new Date('2023-01-01T00:00:00Z'), end: new Date('2023-01-31T00:00:00Z') } };
+  ```
+
+#### String Type
+- **Description:** Variable-length character data.
+- **SQL Type Name:** `STRING`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT 'hello' as greeting
+  const result = { greeting: 'hello' };
+  ```
+
+#### Struct Type
+- **Description:** Container of ordered fields.
+- **SQL Type Name:** `STRUCT`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT STRUCT(1 AS a, 'hello' AS b) as my_struct
+  const result = { my_struct: { a: 1, b: 'hello' } };
+  ```
+
+#### Time Type
+- **Description:** A time of day, as might be displayed on a clock, independent of a specific date and time zone.
+- **SQL Type Name:** `TIME`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT TIME '10:30:00' as some_time
+  const result = { some_time: '10:30:00' }; // Represented as a string
+  ```
+
+#### Timestamp Type
+- **Description:** A timestamp value represents an absolute point in time, independent of any time zone or convention such as Daylight Saving Time (DST).
+- **SQL Type Name:** `TIMESTAMP`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT TIMESTAMP '2023-12-25 10:30:00Z' as some_timestamp
+  const result = { some_timestamp: new Date('2023-12-25T10:30:00Z') };
+  ```
+
+### Lexical Structure
+
+A query is composed of a series of tokens, including identifiers, literals, keywords, and operators, separated by whitespace or comments.
+
+#### Identifiers
+Identifiers are names used for columns, tables, and other objects. They can be quoted with backticks (`) to include special characters or reserved keywords.
+
+- **Unquoted Identifiers:** Must start with a letter or underscore, followed by letters, numbers, or underscores.
+- **Quoted Identifiers:** Enclosed in backticks (\`), can contain any character.
+
+**TS Pseudo-code Example:**
+```typescript
+// Unquoted identifier
+const query1 = `FROM users`;
+
+// Quoted identifier for a reserved keyword
+const query2 = `FROM \`GROUP\``;
+
+// Quoted identifier with special characters
+const query3 = `FROM \`my-table\``;
+```
+
+#### Literals
+Literals represent constant values of a specific data type.
+
+- **String Literals:** Enclosed in single (`'`) or double (`"`) quotes.
+- **Integer Literals:** A sequence of digits, optionally prefixed with `+` or `-`.
+- **Floating-Point Literals:** Numbers with a decimal point or an exponent marker (`e` or `E`).
+- **Boolean Literals:** `TRUE` or `FALSE`.
+- **Array Literals:** Comma-separated elements in square brackets (`[]`).
+- **Struct Literals:** Comma-separated field definitions in parentheses (`()`).
+
+**TS Pseudo-code Example:**
+```typescript
+const query = `
+  SELECT
+    'hello' AS string_literal,
+    123 AS integer_literal,
+    1.23e4 AS float_literal,
+    TRUE AS bool_literal,
+    [1, 2, 3] AS array_literal,
+    (1, 'a') AS struct_literal
+`;
+```
+
+#### Comments
+Comments are ignored by the parser and can be single-line or multi-line.
+
+- **Single-line comments:** Start with `--` or `#`.
+- **Multi-line comments:** Enclosed in `/*` and `*/`.
+
+**TS Pseudo-code Example:**
+```typescript
+const query = `
+  -- This is a single-line comment
+  SELECT name -- an inline comment
+  FROM users # another single-line comment
+  /*
+    This is a
+    multi-line comment
+  */
+`;
+```
 
 ### Data Model
 
@@ -988,17 +1172,35 @@ The underlying data model for the query processor is based on tables (arrays of 
 -   **Rows and Columns:** A row is a JSON object. A column is a property within that object.
 -   **Nested Data:** Nested objects and arrays are supported, and their fields can be accessed using dot notation (e.g., `user.address.city`).
 
+### Conversion Rules
+
+The library will support both explicit and implicit type conversions to provide flexibility and convenience.
+
+#### Explicit Conversion (Casting)
+Explicit conversion is performed using the `CAST` and `SAFE_CAST` functions.
+
+- **`CAST(expression AS type)`:** Converts the expression to the specified type. If the conversion is not possible, it will result in an error.
+- **`SAFE_CAST(expression AS type)`:** Similar to `CAST`, but returns `NULL` if the conversion fails instead of throwing an error.
+
+**TS Pseudo-code Example:**
+```typescript
+// Query: SELECT CAST('123' AS INTEGER) as int_val, SAFE_CAST('abc' AS INTEGER) as safe_int_val
+const result = { int_val: 123, safe_int_val: null };
+```
+
+#### Implicit Conversion (Coercion)
+Implicit conversion, or coercion, is performed automatically when an expression of one data type is used in a context that expects a different data type.
+
+**TS Pseudo-code Example:**
+```typescript
+// In the expression `1 + '2'`, the string '2' will be coerced to an integer.
+// Query: SELECT 1 + '2' as result
+const result = { result: 3 };
+```
+
 ### Built-in Functions
 
 The library will provide a rich set of built-in functions, categorized for clarity.
-
-#### Conversion Functions
-
-These functions are used to convert values from one data type to another.
-
--   `CAST(value AS type)`: Converts a value to the specified type.
-    -   **Pseudo-code:** `CAST('123' AS INTEGER)` would result in `123`.
--   `SAFE_CAST(value AS type)`: Similar to `CAST`, but returns `NULL` if the conversion fails instead of throwing an error.
 
 #### Conditional Expressions
 
@@ -1025,6 +1227,38 @@ These functions are used to convert values from one data type to another.
 -   `EXTRACT(part FROM date)`: Extracts a part of a date (e.g., `YEAR`, `MONTH`, `DAY`).
 -   `FORMAT_DATE(format_string, date)`: Formats a date as a string.
 
+#### Format Functions
+Format functions are used to convert dates, times, timestamps, and other data types into human-readable strings. These functions use a format string that specifies the desired output format, following conventions from standard SQL.
+
+- **Reference:** [Format Elements in BigQuery](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/format-elements)
+
+-   `FORMAT_DATE(format_string, date_expression)`: Formats a `DATE` object.
+-   `FORMAT_TIME(format_string, time_expression)`: Formats a `TIME` object.
+-   `FORMAT_DATETIME(format_string, datetime_expression)`: Formats a `DATETIME` object.
+-   `FORMAT_TIMESTAMP(format_string, timestamp_expression)`: Formats a `TIMESTAMP` object.
+
+**Implementation Note on Date/Time Formatting:**
+Implementing a comprehensive date and time formatting engine from scratch is complex. It is highly recommended to use a robust, well-tested library like **`luxon`** to handle the parsing of format strings and the application of formatting rules. This will ensure consistency and correctness in handling various date and time format elements.
+
+**TS Pseudo-code Example:**
+
+```typescript
+import { DateTime } from 'luxon'; // Example using luxon
+
+const inputTimestamp = new Date('2023-10-26T10:00:00Z');
+
+// Query: |> SELECT FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', event_time) AS formatted_time
+const formatString = '%Y-%m-%d %H:%M:%S';
+
+// The library's implementation would delegate to luxon
+// Note: Luxon uses a different format string syntax ('yyyy-MM-dd HH:mm:ss'),
+// so a mapping from SQL format specifiers to luxon's format specifiers will be needed.
+const luxonDateTime = DateTime.fromJSDate(inputTimestamp);
+const formatted_time = luxonDateTime.toFormat('yyyy-MM-dd HH:mm:ss');
+
+const result = { formatted_time: '2023-10-26 10:00:00' };
+```
+
 #### Array Functions
 
 -   `ARRAY_LENGTH(array)`: Returns the number of elements in an array.
@@ -1043,7 +1277,180 @@ These functions are used with the `AGGREGATE` operator.
 -   `MAX(column)`: Finds the maximum value.
 -   `ARRAY_AGG(column)`: Aggregates values into an array.
 
+### Operators in Expressions
+
+Operators are special characters or keywords that perform operations on one or more values (operands). The library will support a variety of operators, categorized as follows.
+
+- **Reference:** [Operators in BigQuery](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/operators)
+
+#### Arithmetic Operators
+These operators perform mathematical calculations.
+
+- `+` (Addition), `-` (Subtraction), `*` (Multiplication), `/` (Division)
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT price * 1.07 AS price_with_tax
+  const result = { price_with_tax: 100 * 1.07 }; // 107
+  ```
+
+#### Logical Operators
+These operators perform boolean logic.
+
+- `AND`, `OR`, `NOT`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: WHERE age > 18 AND country == 'USA'
+  const isMatch = (row.age > 18) && (row.country === 'USA');
+  ```
+
+#### Comparison Operators
+These operators compare two values.
+
+- `=`, `!=`, `<>`, `<`, `>`, `<=`, `>=`
+- `[NOT] LIKE`: String matching with wildcards (`%`, `_`).
+- `[NOT] BETWEEN`: Checks if a value is within a range.
+- `[NOT] IN`: Checks if a value is in a list of values.
+- `IS [NOT] NULL`: Checks for null values.
+- `IS [NOT] TRUE`/`IS [NOT] FALSE`: Checks for boolean values.
+
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: WHERE age BETWEEN 18 AND 65
+  const isInRange = row.age >= 18 && row.age <= 65;
+  ```
+
+#### Bitwise Operators
+These operators perform bit-level operations on integers.
+
+- `&` (AND), `|` (OR), `^` (XOR), `~` (NOT), `<<` (Left Shift), `>>` (Right Shift)
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT 5 & 3 AS result
+  const result = { result: 5 & 3 }; // 1
+  ```
+
+#### Concatenation Operator
+This operator combines strings, bytes, or arrays.
+
+- `||`
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT firstName || ' ' || lastName AS full_name
+  const result = { full_name: 'John' + ' ' + 'Doe' };
+  ```
+
+### Conditional Expressions
+
+Conditional expressions allow for logic to be embedded directly into queries, enabling powerful transformations and data handling.
+
+- **Reference:** [Conditional Expressions in BigQuery](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/conditional_expressions)
+
+#### `CASE`
+The `CASE` expression is a versatile conditional statement that returns a value based on one or more conditions.
+
+- **Syntax:**
+  ```sql
+  CASE
+    WHEN condition1 THEN result1
+    WHEN condition2 THEN result2
+    ...
+    ELSE else_result
+  END
+  ```
+
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT CASE WHEN score > 90 THEN 'A' WHEN score > 80 THEN 'B' ELSE 'C' END AS grade
+  let grade;
+  if (row.score > 90) {
+    grade = 'A';
+  } else if (row.score > 80) {
+    grade = 'B';
+  } else {
+    grade = 'C';
+  }
+  const result = { grade };
+  ```
+
+#### `IF`
+The `IF` function is a simpler conditional expression that returns one of two values based on a boolean condition.
+
+- **Syntax:** `IF(condition, true_result, else_result)`
+
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT IF(is_member, 'Member', 'Non-Member') AS member_status
+  const member_status = row.is_member ? 'Member' : 'Non-Member';
+  const result = { member_status };
+  ```
+
+#### `COALESCE`
+The `COALESCE` function returns the first non-null value from a list of expressions. This is particularly useful for providing default values for nullable columns.
+
+- **Syntax:** `COALESCE(expr1, expr2, ...)`
+
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT COALESCE(nickname, firstName, 'Guest') AS display_name
+  const display_name = row.nickname || row.firstName || 'Guest';
+  const result = { display_name };
+  ```
+
 -   **Implementation Details:**
     -   Each built-in function will be implemented as a TypeScript function and registered in a global function registry within the interpreter.
     -   The expression evaluator will look up function names in this registry.
     -   The implementation should handle type checking for function arguments to ensure correctness.
+
+### Subqueries
+
+A subquery is a query nested inside another query. Subqueries are a powerful tool for performing complex data manipulations and are supported in various clauses, including `SELECT`, `FROM`, and `WHERE`.
+
+- **Reference:** [Subqueries in BigQuery](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/subqueries)
+
+#### Scalar Subqueries
+A scalar subquery is a subquery that returns a single value (one row with one column). It can be used anywhere a literal value is expected.
+
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Query: SELECT name, (SELECT AVG(age) FROM users) AS avg_age FROM users
+  const allUsers = dataContext.users;
+  const avg_age = allUsers.reduce((sum, user) => sum + user.age, 0) / allUsers.length;
+  const result = allUsers.map(user => ({
+    name: user.name,
+    avg_age,
+  }));
+  ```
+
+#### Multi-row Subqueries (IN, EXISTS)
+Subqueries that return multiple rows are typically used with operators like `IN` or `EXISTS` to check for membership or existence.
+
+- **`IN` Subquery:** Checks if a value is present in the result set of the subquery.
+- **`EXISTS` Subquery:** Checks if the subquery returns any rows.
+
+- **TS Pseudo-code Example (`IN`):**
+  ```typescript
+  // Query: FROM users WHERE id IN (SELECT userId FROM orders WHERE amount > 100)
+  const expensiveOrderUserIds = new Set(
+    dataContext.orders
+      .filter(order => order.amount > 100)
+      .map(order => order.userId)
+  );
+  const result = dataContext.users.filter(user => expensiveOrderUserIds.has(user.id));
+  ```
+
+#### Correlated Subqueries
+A correlated subquery is a subquery that depends on the outer query for its values. The subquery is re-evaluated for each row processed by the outer query.
+
+- **TS Pseudo-code Example:**
+  ```typescript
+  // Find users whose age is higher than the average age of users in their own country
+  // Query: FROM users u1 WHERE age > (SELECT AVG(age) FROM users u2 WHERE u2.country == u1.country)
+  const countryAvgs = {}; // Cache for average ages per country
+  const result = dataContext.users.filter(u1 => {
+    if (!countryAvgs[u1.country]) {
+      const countryUsers = dataContext.users.filter(u => u.country === u1.country);
+      countryAvgs[u1.country] = countryUsers.reduce((sum, u) => sum + u.age, 0) / countryUsers.length;
+    }
+    return u1.age > countryAvgs[u1.country];
+  });
+  ```
