@@ -444,8 +444,49 @@ for (const user of users) {
 
 -   **Implementation Details:**
     -   The `JOIN` implementation will need to support `INNER JOIN`, `LEFT JOIN`, `RIGHT JOIN`, and `FULL OUTER JOIN`.
-    -   The `ON` condition will be parsed to determine the join keys.
-    -   For performance, it may be beneficial to create a lookup map (hash table) from the join key to the rows of one of the datasets.
+    -   The `ON` condition will be parsed to determine the join keys. For performance, it may be beneficial to create a lookup map (hash table) from the join key to the rows of one of the datasets.
+    -   **Edge Cases:**
+        -   **Duplicate Column Names:** If the tables being joined have columns with the same name, the implementation must handle this gracefully. The typical SQL behavior is to require aliases to disambiguate. The output schema should be well-defined.
+        -   **Null Keys:** The behavior of joins on `NULL` keys should be consistent with SQL standards (i.e., `NULL` does not equal `NULL`).
+        -   **Cross Joins:** The syntax should support `CROSS JOIN` for generating a Cartesian product of two tables.
+
+#### `CALL`
+
+The `CALL` operator is used to invoke a Table-Valued Function (TVF).
+
+-   **Syntax:** `|> CALL <tvf_name>(<arg1>, ...)`
+-   **Functionality:** Passes the current dataset as an implicit first argument to the specified TVF and replaces the dataset with the result of the function.
+-   **Input:** An array of JSON objects.
+-   **Output:** The array of JSON objects returned by the TVF.
+
+**Pseudo-code Example:**
+
+```typescript
+// Assuming a TVF `unnest_hobbies` is registered
+const query = `FROM users |> CALL unnest_hobbies('hobbies')`;
+
+const processor = createQueryProcessor(query, { functions: { unnest_hobbies } });
+
+const dataContext = {
+  users: [
+    { name: 'Alice', hobbies: ['reading', 'hiking'] },
+    { name: 'Bob', hobbies: ['gaming'] },
+  ],
+};
+const result = await processor(dataContext);
+
+// result would be:
+// [
+//   { name: 'Alice', hobby: 'reading' },
+//   { name: 'Alice', hobby: 'hiking' },
+//   { name: 'Bob', hobby: 'gaming' },
+// ]
+```
+
+-   **Implementation Details:**
+    -   The interpreter will look up the function name in the TVF registry.
+    -   It will invoke the function, passing the current data as the first argument, followed by any other arguments specified in the `CALL` expression.
+    -   The result of the TVF will replace the current dataset for subsequent pipe operations.
 
 #### `SET`
 
@@ -689,6 +730,136 @@ const result = all_employees.filter(emp => !developerNames.has(JSON.stringify(em
     -   Create a `Set` of the stringified objects from the second result for efficient lookup.
     -   Filter the first result array, keeping only the rows that are not in the `Set`.
 
+### User-Defined Functions (UDFs) and Table-Valued Functions (TVFs)
+
+To provide maximum flexibility, the library will support user-defined functions (UDFs) and table-valued functions (TVFs). These functions can be registered with the query processor ahead of time or defined temporarily within the query itself.
+
+#### 1. Programmatic Registration
+
+Users can define functions in TypeScript and register them when the query processor is created. This is the recommended approach for complex or frequently used logic.
+
+**UDF (User-Defined Function):** A function that takes one or more scalar values and returns a single scalar value. Note that UDFs cannot take a table as a parameter.
+
+**`FunctionRegistry` Interface:**
+
+```typescript
+interface FunctionRegistry {
+  [functionName: string]: (...args: any[]) => any;
+}
+
+interface QueryProcessorOptions {
+  dataProvider?: DataProvider;
+  functions?: FunctionRegistry;
+}
+```
+
+**Pseudo-code Example (UDF):**
+
+```typescript
+// Define a UDF to format a user's name
+const formatName = (firstName: string, lastName: string): string => {
+  return `${lastName}, ${firstName}`;
+};
+
+// Register the UDF with the processor
+const processor = createQueryProcessor(
+  `FROM users |> SELECT formatName(firstName, lastName) AS fullName`,
+  {
+    functions: {
+      formatName,
+    },
+  }
+);
+
+const dataContext = {
+  users: [
+    { firstName: 'Alice', lastName: 'Smith' },
+    { firstName: 'Bob', lastName: 'Johnson' },
+  ],
+};
+
+const result = await processor(dataContext);
+
+// result would be:
+// [
+//   { fullName: 'Smith, Alice' },
+//   { fullName: 'Johnson, Bob' },
+// ]
+```
+
+#### 2. Temporary Functions in Queries
+
+For functions that are specific to a single query, users can define them directly in the query string using `CREATE TEMP FUNCTION`.
+
+-   **Syntax (UDF):** `CREATE TEMP FUNCTION <name>(<args>) AS (<expression>); <query>`
+-   **Syntax (TVF):** `CREATE TEMP TABLE FUNCTION <name>(<args>) AS (<subquery>); <query>`
+
+**Pseudo-code Example (Temporary UDF):**
+
+```typescript
+const query = `
+  CREATE TEMP FUNCTION add(x, y) AS (x + y);
+  FROM numbers
+  |> SELECT add(a, b) AS sum
+`;
+
+const dataContext = {
+  numbers: [
+    { a: 1, b: 2 },
+    { a: 5, b: 10 },
+  ],
+};
+
+const processor = createQueryProcessor(query);
+const result = await processor(dataContext);
+
+// result would be:
+// [
+//   { sum: 3 },
+//   { sum: 15 },
+// ]
+```
+
+**Pseudo-code Example (Temporary TVF):**
+
+```typescript
+const query = `
+  CREATE TEMP TABLE FUNCTION get_senior_users(users_table) AS (
+    FROM users_table |> WHERE age >= 30
+  );
+  FROM get_senior_users(users)
+`;
+
+const dataContext = {
+  users: [
+    { name: 'Alice', age: 30 },
+    { name: 'Bob', age: 25 },
+    { name: 'Charlie', age: 35 },
+  ],
+};
+
+const processor = createQueryProcessor(query);
+const result = await processor(dataContext);
+
+// result would be:
+// [
+//   { name: 'Alice', age: 30 },
+//   { name: 'Charlie', age: 35 },
+// ]
+```
+
+#### Implementation Details
+
+-   **Parser:**
+    -   The parser must be updated to recognize the `CREATE TEMP FUNCTION` syntax.
+    -   It should parse the function name, arguments, and body (either an expression for UDFs or a subquery for TVFs).
+    -   The parsed function definitions should be stored in a separate part of the AST.
+-   **Interpreter:**
+    -   Before executing the main query, the interpreter will process any temporary function definitions from the AST.
+    -   It will create executable functions from the parsed bodies and add them to a temporary function registry for the current query execution.
+    -   When evaluating expressions, the interpreter will look up function names in both the temporary and the programmatically registered function registries, with temporary functions taking precedence.
+    -   The `CALL` operator implementation will need to be aware of TVFs.
+
 ### Phase 4: Public API
 
 The public API is the entry point for executing queries. It is designed to be flexible, supporting both static in-memory data and dynamic data providers.
@@ -784,3 +955,95 @@ const result = await processor();
     -   ["SQL Has Problems. We Can Fix Them: Pipe Syntax In SQL"](https://research.google/pubs/sql-has-problems-we-can-fix-them-pipe-syntax-in-sql/)
 -   **Parser and Compiler Theory:**
     -   For inspiration on building parsers and interpreters, resources like Crafting Interpreters by Robert Nystrom or the Dragon Book can be valuable.
+
+## 5. Language Features
+
+This section details the specific data types, functions, and expressions that the query language will support, aligning with the conventions of ZetaSQL where applicable.
+
+### Supported Data Types
+
+The library will support a core set of data types that are common in JSON and JavaScript environments.
+
+| Data Type | Description | Example |
+| :--- | :--- | :--- |
+| `STRING` | A sequence of characters. | `'hello'` |
+| `INTEGER` | A 64-bit signed integer. | `123` |
+| `FLOAT` | A 64-bit floating-point number. | `3.14` |
+| `BOOLEAN` | A true or false value. | `true` |
+| `ARRAY` | An ordered list of elements of the same type. | `[1, 2, 3]` |
+| `OBJECT` | A collection of key-value pairs (struct). | `{ "a": 1 }` |
+| `DATE` | A calendar date. | `DATE '2023-12-25'` |
+| `DATETIME` | A calendar date and time. | `DATETIME '2023-12-25 10:30:00'` |
+| `TIMESTAMP` | An exact point in time, with microsecond precision. | `TIMESTAMP '2023-12-25 10:30:00Z'` |
+| `NULL` | Represents a missing or undefined value. | `null` |
+
+-   **Implementation Details:**
+    -   The parser will need to recognize these data types, both as literals in expressions and potentially in `CAST` operations.
+    -   The interpreter will use the corresponding native JavaScript types for processing (e.g., `string`, `number`, `boolean`, `Array`, `Object`, `Date`).
+
+### Data Model
+
+The underlying data model for the query processor is based on tables (arrays of objects) where each object represents a row.
+
+-   **Rows and Columns:** A row is a JSON object. A column is a property within that object.
+-   **Nested Data:** Nested objects and arrays are supported, and their fields can be accessed using dot notation (e.g., `user.address.city`).
+
+### Built-in Functions
+
+The library will provide a rich set of built-in functions, categorized for clarity.
+
+#### Conversion Functions
+
+These functions are used to convert values from one data type to another.
+
+-   `CAST(value AS type)`: Converts a value to the specified type.
+    -   **Pseudo-code:** `CAST('123' AS INTEGER)` would result in `123`.
+-   `SAFE_CAST(value AS type)`: Similar to `CAST`, but returns `NULL` if the conversion fails instead of throwing an error.
+
+#### Conditional Expressions
+
+-   `CASE WHEN <condition> THEN <result> ... ELSE <default> END`: A standard `CASE` expression.
+-   `IF(<condition>, <true_result>, <false_result>)`: A simpler conditional function.
+-   `COALESCE(<expr1>, <expr2>, ...)`: Returns the first non-null expression in the list.
+
+#### String Functions
+
+-   `CONCAT(str1, str2, ...)`
+-   `LOWER(str)`
+-   `UPPER(str)`
+-   `LENGTH(str)`
+-   `SUBSTR(str, position, length)`
+-   `TRIM(str)`
+-   `REPLACE(str, search, replacement)`
+
+#### Date and Time Functions
+
+-   `CURRENT_DATE()`: Returns the current date.
+-   `CURRENT_TIMESTAMP()`: Returns the current timestamp.
+-   `DATE_ADD(date, INTERVAL value unit)`: Adds a time interval to a date.
+-   `DATE_DIFF(date1, date2, unit)`: Returns the difference between two dates.
+-   `EXTRACT(part FROM date)`: Extracts a part of a date (e.g., `YEAR`, `MONTH`, `DAY`).
+-   `FORMAT_DATE(format_string, date)`: Formats a date as a string.
+
+#### Array Functions
+
+-   `ARRAY_LENGTH(array)`: Returns the number of elements in an array.
+-   `ARRAY_TO_STRING(array, delimiter)`: Joins array elements into a string.
+-   `ARRAY_CONCAT(array1, array2)`: Concatenates two arrays.
+-   `array[OFFSET(index)]`: Accesses an array element by its zero-based index.
+
+#### Aggregate Functions
+
+These functions are used with the `AGGREGATE` operator.
+
+-   `COUNT(column | *)`: Counts the number of rows.
+-   `SUM(column)`: Calculates the sum of values.
+-   `AVG(column)`: Calculates the average of values.
+-   `MIN(column)`: Finds the minimum value.
+-   `MAX(column)`: Finds the maximum value.
+-   `ARRAY_AGG(column)`: Aggregates values into an array.
+
+-   **Implementation Details:**
+    -   Each built-in function will be implemented as a TypeScript function and registered in a global function registry within the interpreter.
+    -   The expression evaluator will look up function names in this registry.
+    -   The implementation should handle type checking for function arguments to ensure correctness.
