@@ -263,14 +263,16 @@ const result = inputData.filter(row => row.age > 28);
 
 #### `EXTEND`
 
-The `EXTEND` operator adds new columns to the dataset.
+The `EXTEND` operator adds new columns to the dataset. It can be used for simple calculations on a per-row basis, or for complex window functions that compute values over a set of rows.
 
--   **Syntax:** `|> EXTEND <expression> AS <new_column_name>`
--   **Functionality:** Adds a new computed column to each row.
+-   **Syntax:**
+    -   For simple computed columns: `|> EXTEND <expression> AS <new_column_name>`
+    -   For window functions: `|> EXTEND <window_function> OVER (<partition_by_clause> <order_by_clause>) AS <new_column_name>`
+-   **Functionality:** Adds a new computed column to each row. When used with `OVER`, it performs calculations across a set of related rows.
 -   **Input:** An array of JSON objects.
 -   **Output:** A new array of JSON objects with the new column added to each object.
 
-**Pseudo-code Example:**
+**Pseudo-code Example (Computed Column):**
 
 ```typescript
 const inputData = [
@@ -291,10 +293,31 @@ const result = inputData.map(row => ({
 // ]
 ```
 
+**Pseudo-code Example (Window Function):**
+
+```typescript
+const inputData = [
+  { user_id: 'user_A', event_timestamp: 1672531200 },
+  { user_id: 'user_A', event_timestamp: 1672531210 },
+  { user_id: 'user_B', event_timestamp: 1672531205 },
+];
+
+// Query: |> EXTEND ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY event_timestamp ASC) AS rn
+const result = [
+    { user_id: 'user_A', event_timestamp: 1672531200, rn: 1 },
+    { user_id: 'user_A', event_timestamp: 1672531210, rn: 2 },
+    { user_id: 'user_B', event_timestamp: 1672531205, rn: 1 },
+];
+```
+
 -   **Implementation Details:**
     -   The `EXTEND` operator will iterate through each row of the input data.
-    -   For each row, it will evaluate the expression and add the result as a new property with the specified alias.
-    -   The expression parser must support arithmetic operations and functions.
+    -   For simple expressions, it will evaluate the expression and add the result as a new property with the specified alias. The expression parser must support arithmetic operations and functions.
+    -   For window functions (`OVER` clause):
+        -   This will be one of the more complex parts of the interpreter.
+        -   It will first need to partition the data based on the `PARTITION BY` clause.
+        -   Within each partition, it will sort the data based on the `ORDER BY` clause.
+        -   Finally, it will apply the window function (e.g., `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`, `LEAD()`, `LAG()`, `SUM()`, `AVG()`, etc.) to each row in the sorted partition.
 
 #### `AGGREGATE`
 
@@ -803,14 +826,14 @@ const result = await processor(dataContext);
 
 For functions that are specific to a single query, users can define them directly in the query string using `CREATE TEMP FUNCTION`.
 
--   **Syntax (UDF):** `CREATE TEMP FUNCTION <name>(<args>) AS (<expression>); <query>`
--   **Syntax (TVF):** `CREATE TEMP TABLE FUNCTION <name>(<args>) AS (<subquery>); <query>`
+-   **Syntax (UDF):** `CREATE TEMP FUNCTION <name>(<args>) [RETURNS <type>] AS (<expression>); <query>`
+-   **Syntax (TVF):** `CREATE TEMP TABLE FUNCTION <name>(<args>) [RETURNS <type>] AS (<subquery>); <query>`
 
 **Pseudo-code Example (Temporary UDF):**
 
 ```typescript
 const query = `
-  CREATE TEMP FUNCTION add(x, y) AS (x + y);
+  CREATE TEMP FUNCTION add(x, y) RETURNS INT64 AS (x + y);
   FROM numbers
   |> SELECT add(a, b) AS sum
 `;
@@ -1238,6 +1261,8 @@ The library will provide a rich set of built-in functions, categorized for clari
 -   `DATE_DIFF(date1, date2, unit)`: Returns the difference between two dates.
 -   `EXTRACT(part FROM date)`: Extracts a part of a date (e.g., `YEAR`, `MONTH`, `DAY`).
 -   `FORMAT_DATE(format_string, date)`: Formats a date as a string.
+-   `TIMESTAMP_ADD(timestamp, INTERVAL value unit)`: Adds a time interval to a timestamp.
+-   `UNIX_SECONDS(timestamp)`: Returns the number of seconds since the Unix epoch.
 
 #### Format Functions
 Format functions are used to convert dates, times, timestamps, and other data types into human-readable strings. These functions use a format string that specifies the desired output format, following conventions from standard SQL.
