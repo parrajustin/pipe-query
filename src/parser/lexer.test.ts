@@ -54,21 +54,21 @@ describe('Lexer', () => {
     const query = `SELECT 'hello', "world", 123, 45.67, TRUE, FALSE, NULL`;
     const tokens = getSimplifiedTokens(query);
     const expectedTokens = [
-        { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
-        { type: TokenType.STRING, lexeme: "'hello'", literal: 'hello' },
-        { type: TokenType.COMMA, lexeme: ',', literal: null },
-        { type: TokenType.STRING, lexeme: '"world"', literal: 'world' },
-        { type: TokenType.COMMA, lexeme: ',', literal: null },
-        { type: TokenType.NUMBER, lexeme: '123', literal: 123 },
-        { type: TokenType.COMMA, lexeme: ',', literal: null },
-        { type: TokenType.NUMBER, lexeme: '45.67', literal: 45.67 },
-        { type: TokenType.COMMA, lexeme: ',', literal: null },
-        { type: TokenType.TRUE, lexeme: 'TRUE', literal: null },
-        { type: TokenType.COMMA, lexeme: ',', literal: null },
-        { type: TokenType.FALSE, lexeme: 'FALSE', literal: null },
-        { type: TokenType.COMMA, lexeme: ',', literal: null },
-        { type: TokenType.NULL, lexeme: 'NULL', literal: null },
-        { type: TokenType.EOF, lexeme: '', literal: null },
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.STRING, lexeme: "'hello'", literal: 'hello' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: '"world"', literal: 'world' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.NUMBER, lexeme: '123', literal: 123 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.NUMBER, lexeme: '45.67', literal: 45.67 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.TRUE, lexeme: 'TRUE', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.FALSE, lexeme: 'FALSE', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.NULL, lexeme: 'NULL', literal: null },
+      { type: TokenType.EOF, lexeme: '', literal: null },
     ];
     expect(tokens).toEqual(expectedTokens);
   });
@@ -77,14 +77,14 @@ describe('Lexer', () => {
     const query = 'age > 25 AND clicks != 0';
     const tokens = getSimplifiedTokens(query);
     const expectedTokens = [
-        { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
-        { type: TokenType.GREATER, lexeme: '>', literal: null },
-        { type: TokenType.NUMBER, lexeme: '25', literal: 25 },
-        { type: TokenType.AND, lexeme: 'AND', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'clicks', literal: null },
-        { type: TokenType.BANG_EQUAL, lexeme: '!=', literal: null },
-        { type: TokenType.NUMBER, lexeme: '0', literal: 0 },
-        { type: TokenType.EOF, lexeme: '', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
+      { type: TokenType.GREATER, lexeme: '>', literal: null },
+      { type: TokenType.NUMBER, lexeme: '25', literal: 25 },
+      { type: TokenType.AND, lexeme: 'AND', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'clicks', literal: null },
+      { type: TokenType.BANG_EQUAL, lexeme: '!=', literal: null },
+      { type: TokenType.NUMBER, lexeme: '0', literal: 0 },
+      { type: TokenType.EOF, lexeme: '', literal: null },
     ];
     expect(tokens).toEqual(expectedTokens);
   });
@@ -97,12 +97,12 @@ describe('Lexer', () => {
     `;
     const tokens = getSimplifiedTokens(query);
     const expectedTokens = [
-        { type: TokenType.FROM, lexeme: 'FROM', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'users', literal: null },
-        { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
-        { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'name', literal: null },
-        { type: TokenType.EOF, lexeme: '', literal: null },
+      { type: TokenType.FROM, lexeme: 'FROM', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'users', literal: null },
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'name', literal: null },
+      { type: TokenType.EOF, lexeme: '', literal: null },
     ];
     expect(tokens).toEqual(expectedTokens);
   });
@@ -115,9 +115,9 @@ describe('Lexer', () => {
     `;
     const tokens = getSimplifiedTokens(query);
     const expectedTokens = [
-        { type: TokenType.FROM, lexeme: 'FROM', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'users', literal: null },
-        { type: TokenType.EOF, lexeme: '', literal: null },
+      { type: TokenType.FROM, lexeme: 'FROM', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'users', literal: null },
+      { type: TokenType.EOF, lexeme: '', literal: null },
     ];
     expect(tokens).toEqual(expectedTokens);
   });
@@ -126,22 +126,22 @@ describe('Lexer', () => {
     const query = 'SELECT user.name, user.age FROM users(1, 2)';
     const tokens = getSimplifiedTokens(query);
     const expectedTokens = [
-        { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'user', literal: null },
-        { type: TokenType.DOT, lexeme: '.', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'name', literal: null },
-        { type: TokenType.COMMA, lexeme: ',', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'user', literal: null },
-        { type: TokenType.DOT, lexeme: '.', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
-        { type: TokenType.FROM, lexeme: 'FROM', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'users', literal: null },
-        { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
-        { type: TokenType.NUMBER, lexeme: '1', literal: 1 },
-        { type: TokenType.COMMA, lexeme: ',', literal: null },
-        { type: TokenType.NUMBER, lexeme: '2', literal: 2 },
-        { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
-        { type: TokenType.EOF, lexeme: '', literal: null },
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'user', literal: null },
+      { type: TokenType.DOT, lexeme: '.', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'name', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'user', literal: null },
+      { type: TokenType.DOT, lexeme: '.', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
+      { type: TokenType.FROM, lexeme: 'FROM', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'users', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.NUMBER, lexeme: '1', literal: 1 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.NUMBER, lexeme: '2', literal: 2 },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.EOF, lexeme: '', literal: null },
     ];
     expect(tokens).toEqual(expectedTokens);
   });
@@ -156,29 +156,29 @@ describe('Lexer', () => {
     `;
     const tokens = getSimplifiedTokens(query);
     const expectedTokens = [
-        { type: TokenType.FROM, lexeme: 'FROM', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: '`user-data`', literal: 'user-data' },
-        { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
-        { type: TokenType.WHERE, lexeme: 'WHERE', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
-        { type: TokenType.GREATER_EQUAL, lexeme: '>=', literal: null },
-        { type: TokenType.NUMBER, lexeme: '60', literal: 60 },
-        { type: TokenType.AND, lexeme: 'AND', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'city', literal: null },
-        { type: TokenType.EQUAL, lexeme: '=', literal: null },
-        { type: TokenType.STRING, lexeme: "'New York'", literal: 'New York' },
-        { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
-        { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'name', literal: null },
-        { type: TokenType.COMMA, lexeme: ',', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
-        { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
-        { type: TokenType.ORDER, lexeme: 'ORDER', literal: null },
-        { type: TokenType.BY, lexeme: 'BY', literal: null },
-        { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
-        { type: TokenType.DESC, lexeme: 'DESC', literal: null },
-        { type: TokenType.SEMICOLON, lexeme: ';', literal: null },
-        { type: TokenType.EOF, lexeme: '', literal: null },
+      { type: TokenType.FROM, lexeme: 'FROM', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: '`user-data`', literal: 'user-data' },
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.WHERE, lexeme: 'WHERE', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
+      { type: TokenType.GREATER_EQUAL, lexeme: '>=', literal: null },
+      { type: TokenType.NUMBER, lexeme: '60', literal: 60 },
+      { type: TokenType.AND, lexeme: 'AND', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'city', literal: null },
+      { type: TokenType.EQUAL, lexeme: '=', literal: null },
+      { type: TokenType.STRING, lexeme: "'New York'", literal: 'New York' },
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'name', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.ORDER, lexeme: 'ORDER', literal: null },
+      { type: TokenType.BY, lexeme: 'BY', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
+      { type: TokenType.DESC, lexeme: 'DESC', literal: null },
+      { type: TokenType.SEMICOLON, lexeme: ';', literal: null },
+      { type: TokenType.EOF, lexeme: '', literal: null },
     ];
     expect(tokens).toEqual(expectedTokens);
   });
@@ -442,5 +442,466 @@ describe('Lexer', () => {
       const query = '1.2e';
       expect(() => getSimplifiedTokens(query)).toThrow('Invalid number format');
     });
+  });
+
+  it('should tokenize the complex script.sql correctly', () => {
+    const scriptSqlContent = `
+-- Define a temporary UDF to parse a JSON string and extract the HTTP code.
+CREATE TEMP FUNCTION ParseHttpCode(json_payload STRING) RETURNS INT64 AS (
+  SAFE_CAST(JSON_VALUE(json_payload, '$.http_response_code') AS INT64)
+);
+
+-- Define a temporary UDF to classify the HTTP code into a readable category.
+CREATE TEMP FUNCTION ClassifyErrorType(http_code INT64) RETURNS STRING AS ((
+  CASE
+    WHEN http_code IS NULL THEN 'Unparsed'
+    WHEN http_code >= 200 AND http_code < 300 THEN 'OK'
+    WHEN http_code >= 400 AND http_code < 500 THEN 'Client Error'
+    WHEN http_code >= 500 AND http_code < 600 THEN 'Server Error'
+    ELSE 'Other'
+  END
+));
+
+-- Define a temporary TVF to deduplicate events.
+-- This version is refactored to use pipe syntax *inside* its definition.
+CREATE TEMP TABLE FUNCTION DeduplicateByUser(
+  events_table TABLE, 
+  time_window_seconds INT64
+) AS (
+  FROM events_table
+  
+  -- Use EXTEND to add a discrete time bucket for partitioning.
+  |> EXTEND
+    FLOOR(UNIX_SECONDS(event_timestamp) / time_window_seconds) AS time_bucket,
+    ROW_NUMBER() OVER (
+      PARTITION BY user_id, time_bucket 
+      ORDER BY event_timestamp ASC
+    ) AS rn
+    
+  -- Use WHERE to filter, keeping only the first event (rn = 1) in each partition.
+  |> WHERE rn = 1
+  
+  -- Use SELECT * to return all original columns from events_table,
+  -- effectively discarding the temporary 'time_bucket' and 'rn' columns.
+  |> SELECT *
+);
+
+-- Use a WITH clause to create sample data for this example.
+WITH RawEvents AS (
+  SELECT 1 AS event_id, 'user_A' AS user_id, CURRENT_TIMESTAMP() AS event_timestamp, '{"http_response_code": "503"}' AS raw_json_payload UNION ALL
+  SELECT 2, 'user_A', TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 10 SECOND), '{"http_response_code": "503"}' UNION ALL
+  SELECT 3, 'user_B', CURRENT_TIMESTAMP(), '{"http_response_code": "404"}' UNION ALL
+  SELECT 4, 'user_C', CURRENT_TIMESTAMP(), '{"http_response_code": "200"}' UNION ALL
+  SELECT 5, 'user_B', TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 70 SECOND), '{"http_response_code": "404"}' UNION ALL
+  SELECT 6, 'user_A', TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 80 SECOND), '{"http_response_code": "503"}' UNION ALL
+  SELECT 7, 'user_D', CURRENT_TIMESTAMP(), '{"http_response_code": "401"}' UNION ALL
+  SELECT 8, 'user_D', CURRENT_TIMESTAMP(), '{"http_response_code": "401"}' UNION ALL
+  SELECT 9, 'user_E', CURRENT_TIMESTAMP(), '{"http_response_code": "500"}' UNION ALL
+  SELECT 10, 'user_E', CURRENT_TIMESTAMP(), '{"other_key": "value"}' -- This will be an 'Unparsed' error
+)
+
+-- This is the main query. Its structure is unchanged, as the TVF's
+-- public signature (its inputs and outputs) remains the same.
+FROM RawEvents
+
+-- Use the first UDF to parse the JSON and add the \`http_code\` column.
+|> EXTEND
+  ParseHttpCode(raw_json_payload) AS http_code
+
+-- Use the second UDF to classify the code and add the \`error_category\` column.
+|> EXTEND
+  ClassifyErrorType(http_code) AS error_category
+
+-- Use the CALL operator to invoke the TVF (which now uses pipe syntax internally).
+|> CALL DeduplicateByUser(60)
+
+-- Filter out successful events.
+|> WHERE error_category != 'OK'
+
+-- Use AGGREGATE to count errors by category.
+|> AGGREGATE
+  COUNT(event_id) AS total_errors,
+  COUNT(DISTINCT user_id) AS impacted_users
+  GROUP BY error_category
+
+-- Use ORDER BY to find the most common errors.
+|> ORDER BY total_errors DESC
+
+-- Use LIMIT to get just the top 10.
+|> LIMIT 10;
+    `;
+
+    const tokens = getSimplifiedTokens(scriptSqlContent);
+    const expectedTokens = [
+      { type: TokenType.CREATE, lexeme: 'CREATE', literal: null },
+      { type: TokenType.TEMP, lexeme: 'TEMP', literal: null },
+      { type: TokenType.FUNCTION, lexeme: 'FUNCTION', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'ParseHttpCode', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'json_payload', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'STRING', literal: null }, // Corrected: STRING as type is an IDENTIFIER
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.RETURNS, lexeme: 'RETURNS', literal: null },
+      { type: TokenType.INT64, lexeme: 'INT64', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.SAFE_CAST, lexeme: 'SAFE_CAST', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'JSON_VALUE', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'json_payload', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'$.http_response_code'", literal: '$.http_response_code' },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.INT64, lexeme: 'INT64', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.SEMICOLON, lexeme: ';', literal: null },
+
+      { type: TokenType.CREATE, lexeme: 'CREATE', literal: null },
+      { type: TokenType.TEMP, lexeme: 'TEMP', literal: null },
+      { type: TokenType.FUNCTION, lexeme: 'FUNCTION', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'ClassifyErrorType', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
+      { type: TokenType.INT64, lexeme: 'INT64', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.RETURNS, lexeme: 'RETURNS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'STRING', literal: null }, // Corrected: STRING as type is an IDENTIFIER
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.CASE, lexeme: 'CASE', literal: null },
+      { type: TokenType.WHEN, lexeme: 'WHEN', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
+      { type: TokenType.IS, lexeme: 'IS', literal: null },
+      { type: TokenType.NULL, lexeme: 'NULL', literal: null },
+      { type: TokenType.THEN, lexeme: 'THEN', literal: null },
+      { type: TokenType.STRING, lexeme: "'Unparsed'", literal: 'Unparsed' },
+      { type: TokenType.WHEN, lexeme: 'WHEN', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
+      { type: TokenType.GREATER_EQUAL, lexeme: '>=', literal: null },
+      { type: TokenType.NUMBER, lexeme: '200', literal: 200 },
+      { type: TokenType.AND, lexeme: 'AND', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
+      { type: TokenType.LESS, lexeme: '<', literal: null },
+      { type: TokenType.NUMBER, lexeme: '300', literal: 300 },
+      { type: TokenType.THEN, lexeme: 'THEN', literal: null },
+      { type: TokenType.STRING, lexeme: "'OK'", literal: 'OK' },
+      { type: TokenType.WHEN, lexeme: 'WHEN', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
+      { type: TokenType.GREATER_EQUAL, lexeme: '>=', literal: null },
+      { type: TokenType.NUMBER, lexeme: '400', literal: 400 },
+      { type: TokenType.AND, lexeme: 'AND', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
+      { type: TokenType.LESS, lexeme: '<', literal: null },
+      { type: TokenType.NUMBER, lexeme: '500', literal: 500 },
+      { type: TokenType.THEN, lexeme: 'THEN', literal: null },
+      { type: TokenType.STRING, lexeme: "'Client Error'", literal: 'Client Error' },
+      { type: TokenType.WHEN, lexeme: 'WHEN', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
+      { type: TokenType.GREATER_EQUAL, lexeme: '>=', literal: null },
+      { type: TokenType.NUMBER, lexeme: '500', literal: 500 },
+      { type: TokenType.AND, lexeme: 'AND', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
+      { type: TokenType.LESS, lexeme: '<', literal: null },
+      { type: TokenType.NUMBER, lexeme: '600', literal: 600 },
+      { type: TokenType.THEN, lexeme: 'THEN', literal: null },
+      { type: TokenType.STRING, lexeme: "'Server Error'", literal: 'Server Error' },
+      { type: TokenType.ELSE, lexeme: 'ELSE', literal: null },
+      { type: TokenType.STRING, lexeme: "'Other'", literal: 'Other' },
+      { type: TokenType.END, lexeme: 'END', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.SEMICOLON, lexeme: ';', literal: null },
+
+      { type: TokenType.CREATE, lexeme: 'CREATE', literal: null },
+      { type: TokenType.TEMP, lexeme: 'TEMP', literal: null },
+      { type: TokenType.TABLE, lexeme: 'TABLE', literal: null },
+      { type: TokenType.FUNCTION, lexeme: 'FUNCTION', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'DeduplicateByUser', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'events_table', literal: null },
+      { type: TokenType.TABLE, lexeme: 'TABLE', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'time_window_seconds', literal: null },
+      { type: TokenType.INT64, lexeme: 'INT64', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.FROM, lexeme: 'FROM', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'events_table', literal: null },
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.EXTEND, lexeme: 'EXTEND', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'FLOOR', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'UNIX_SECONDS', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'event_timestamp', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.SLASH, lexeme: '/', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'time_window_seconds', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'time_bucket', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null }, // Added comma here as per EXTEND with multiple expressions
+      { type: TokenType.IDENTIFIER, lexeme: 'ROW_NUMBER', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.OVER, lexeme: 'OVER', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.PARTITION, lexeme: 'PARTITION', literal: null },
+      { type: TokenType.BY, lexeme: 'BY', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'user_id', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'time_bucket', literal: null },
+      { type: TokenType.ORDER, lexeme: 'ORDER', literal: null },
+      { type: TokenType.BY, lexeme: 'BY', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'event_timestamp', literal: null },
+      { type: TokenType.ASC, lexeme: 'ASC', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'rn', literal: null },
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.WHERE, lexeme: 'WHERE', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'rn', literal: null },
+      { type: TokenType.EQUAL, lexeme: '=', literal: null },
+      { type: TokenType.NUMBER, lexeme: '1', literal: 1 },
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.STAR, lexeme: '*', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.SEMICOLON, lexeme: ';', literal: null },
+
+      { type: TokenType.WITH, lexeme: 'WITH', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'RawEvents', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '1', literal: 1 },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'event_id', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'user_A'", literal: 'user_A' },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'user_id', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'event_timestamp', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"503\"}'", literal: '{"http_response_code": "503"}' },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'raw_json_payload', literal: null },
+      { type: TokenType.UNION, lexeme: 'UNION', literal: null },
+      { type: TokenType.ALL, lexeme: 'ALL', literal: null },
+
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '2', literal: 2 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'user_A'", literal: 'user_A' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'TIMESTAMP_ADD', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.INTERVAL, lexeme: 'INTERVAL', literal: null },
+      { type: TokenType.NUMBER, lexeme: '10', literal: 10 },
+      { type: TokenType.SECOND, lexeme: 'SECOND', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"503\"}'", literal: '{"http_response_code": "503"}' },
+      { type: TokenType.UNION, lexeme: 'UNION', literal: null },
+      { type: TokenType.ALL, lexeme: 'ALL', literal: null },
+
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '3', literal: 3 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'user_B'", literal: 'user_B' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"404\"}'", literal: '{"http_response_code": "404"}' },
+      { type: TokenType.UNION, lexeme: 'UNION', literal: null },
+      { type: TokenType.ALL, lexeme: 'ALL', literal: null },
+
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '4', literal: 4 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'user_C'", literal: 'user_C' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"200\"}'", literal: '{"http_response_code": "200"}' },
+      { type: TokenType.UNION, lexeme: 'UNION', literal: null },
+      { type: TokenType.ALL, lexeme: 'ALL', literal: null },
+
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '5', literal: 5 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'user_B'", literal: 'user_B' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'TIMESTAMP_ADD', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.INTERVAL, lexeme: 'INTERVAL', literal: null },
+      { type: TokenType.NUMBER, lexeme: '70', literal: 70 },
+      { type: TokenType.SECOND, lexeme: 'SECOND', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"404\"}'", literal: '{"http_response_code": "404"}' },
+      { type: TokenType.UNION, lexeme: 'UNION', literal: null },
+      { type: TokenType.ALL, lexeme: 'ALL', literal: null },
+
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '6', literal: 6 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'user_A'", literal: 'user_A' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'TIMESTAMP_ADD', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.INTERVAL, lexeme: 'INTERVAL', literal: null },
+      { type: TokenType.NUMBER, lexeme: '80', literal: 80 },
+      { type: TokenType.SECOND, lexeme: 'SECOND', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"503\"}'", literal: '{"http_response_code": "503"}' },
+      { type: TokenType.UNION, lexeme: 'UNION', literal: null },
+      { type: TokenType.ALL, lexeme: 'ALL', literal: null },
+
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '7', literal: 7 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'user_D'", literal: 'user_D' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"401\"}'", literal: '{"http_response_code": "401"}' },
+      { type: TokenType.UNION, lexeme: 'UNION', literal: null },
+      { type: TokenType.ALL, lexeme: 'ALL', literal: null },
+
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '8', literal: 8 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'user_D'", literal: 'user_D' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"401\"}'", literal: '{"http_response_code": "401"}' },
+      { type: TokenType.UNION, lexeme: 'UNION', literal: null },
+      { type: TokenType.ALL, lexeme: 'ALL', literal: null },
+
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '9', literal: 9 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'user_E'", literal: 'user_E' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"500\"}'", literal: '{"http_response_code": "500"}' },
+      { type: TokenType.UNION, lexeme: 'UNION', literal: null },
+      { type: TokenType.ALL, lexeme: 'ALL', literal: null },
+
+      { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '10', literal: 10 },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'user_E'", literal: 'user_E' },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.STRING, lexeme: "'{\"other_key\": \"value\"}'", literal: '{"other_key": "value"}' },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+
+      { type: TokenType.FROM, lexeme: 'FROM', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'RawEvents', literal: null },
+
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.EXTEND, lexeme: 'EXTEND', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'ParseHttpCode', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'raw_json_payload', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
+
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.EXTEND, lexeme: 'EXTEND', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'ClassifyErrorType', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'error_category', literal: null },
+
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.CALL, lexeme: 'CALL', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'DeduplicateByUser', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.NUMBER, lexeme: '60', literal: 60 },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.WHERE, lexeme: 'WHERE', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'error_category', literal: null },
+      { type: TokenType.BANG_EQUAL, lexeme: '!=', literal: null },
+      { type: TokenType.STRING, lexeme: "'OK'", literal: 'OK' },
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.AGGREGATE, lexeme: 'AGGREGATE', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'COUNT', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'event_id', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'total_errors', literal: null },
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'COUNT', literal: null },
+      { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
+      { type: TokenType.DISTINCT, lexeme: 'DISTINCT', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'user_id', literal: null },
+      { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
+      { type: TokenType.AS, lexeme: 'AS', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'impacted_users', literal: null },
+      { type: TokenType.GROUP, lexeme: 'GROUP', literal: null },
+      { type: TokenType.BY, lexeme: 'BY', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'error_category', literal: null },
+
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.ORDER, lexeme: 'ORDER', literal: null },
+      { type: TokenType.BY, lexeme: 'BY', literal: null },
+      { type: TokenType.IDENTIFIER, lexeme: 'total_errors', literal: null },
+      { type: TokenType.DESC, lexeme: 'DESC', literal: null },
+
+      { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
+      { type: TokenType.LIMIT, lexeme: 'LIMIT', literal: null },
+      { type: TokenType.NUMBER, lexeme: '10', literal: 10 },
+      { type: TokenType.SEMICOLON, lexeme: ';', literal: null },
+      { type: TokenType.EOF, lexeme: '', literal: null },
+    ];
+    expect(tokens).toEqual(expectedTokens);
   });
 });

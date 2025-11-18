@@ -24,11 +24,10 @@ CREATE TEMP TABLE FUNCTION DeduplicateByUser(
   
   -- Use EXTEND to add a discrete time bucket for partitioning.
   |> EXTEND
-    FLOOR(UNIX_SECONDS(event_timestamp) / time_window_seconds) AS time_bucket
+    FLOOR(UNIX_SECONDS(event_timestamp) / time_window_seconds) AS time_bucket,
     
   -- Use WINDOW to calculate the row number (rn) for each user/time_bucket.
   -- This is the pipe equivalent of the `QUALIFY ROW_NUMBER() OVER (...)`
-  |> WINDOW
     ROW_NUMBER() OVER (
       PARTITION BY user_id, time_bucket 
       ORDER BY event_timestamp ASC
