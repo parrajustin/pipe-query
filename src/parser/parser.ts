@@ -6,6 +6,7 @@ import {
   Binary,
   Grouping,
   Literal,
+  Logical,
   Unary,
   Variable,
   FromStmt,
@@ -29,6 +30,9 @@ import {
   AsStmt,
   CallStmt,
   SetStmt,
+  CreateFunctionStmt,
+  CaseExpr,
+  FunctionParam,
 } from './ast';
 
 class ParseError extends Error {}
@@ -39,6 +43,17 @@ export class Parser {
 
   constructor(tokens: Token[]) {
     this.tokens = tokens;
+  }
+
+  private isDataType(token: Token): boolean {
+    return [
+        TokenType.ARRAY, TokenType.BOOL, TokenType.BOOLEAN, TokenType.BYTES,
+        TokenType.DATE, TokenType.DATETIME, TokenType.TIME, TokenType.TIMESTAMP,
+        TokenType.STRUCT, TokenType.STRING, TokenType.JSON, TokenType.INT,
+        TokenType.INT64, TokenType.SMALLINT, TokenType.INTEGER, TokenType.BIGINT,
+        TokenType.TINYINT, TokenType.BYTEINT, TokenType.NUMERIC, TokenType.DECIMAL,
+        TokenType.BIGNUMERIC, TokenType.BIGDECIMAL, TokenType.FLOAT64
+    ].includes(token.type);
   }
 
   parse(): QueryStmt | null {
@@ -54,6 +69,7 @@ export class Parser {
   }
 
   private statement(): Stmt {
+    if (this.match(TokenType.CREATE)) return this.createFunctionStatement();
     if (this.match(TokenType.FROM)) return this.fromStatement();
     if (this.match(TokenType.PIPE_GREATER)) return this.pipeStatement();
     return this.expressionStatement();
@@ -63,6 +79,46 @@ export class Parser {
     const table = this.consume(TokenType.IDENTIFIER, 'Expect table name.');
     return new FromStmt(table);
   }
+
+  private createFunctionStatement(): Stmt {
+    this.consume(TokenType.TEMP, "Expect 'TEMP' after 'CREATE'.");
+    const isTable = this.match(TokenType.TABLE);
+    this.consume(TokenType.FUNCTION, "Expect 'FUNCTION' after 'TEMP'.");
+    const name = this.consume(TokenType.IDENTIFIER, 'Expect function name.');
+
+    this.consume(TokenType.LEFT_PAREN, "Expect '(' after function name.");
+    const params: FunctionParam[] = [];
+    if (!this.check(TokenType.RIGHT_PAREN)) {
+        do {
+            const paramName = this.consume(TokenType.IDENTIFIER, 'Expect parameter name.');
+            if (!this.isDataType(this.peek())) {
+              throw this.error(this.peek(), 'Expect parameter type.');
+            }
+            const paramType = this.advance();
+            params.push({ name: paramName, type: paramType });
+        } while (this.match(TokenType.COMMA));
+    }
+    this.consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.");
+
+    let returnType: Token | null = null;
+    if (this.match(TokenType.RETURNS)) {
+        if (!this.isDataType(this.peek())) {
+            throw this.error(this.peek(), "Expect return type.");
+        }
+        returnType = this.advance();
+    }
+
+    this.consume(TokenType.AS, "Expect 'AS' before function body.");
+    
+    this.consume(TokenType.LEFT_PAREN, "Expect '(' before function body.");
+    const body = this.expression();
+    this.consume(TokenType.RIGHT_PAREN, "Expect ')' after function body.");
+    
+    this.consume(TokenType.SEMICOLON, "Expect ';' after function definition.");
+
+    return new CreateFunctionStmt(name, params, returnType, body, isTable);
+  }
+
 
   private pipeStatement(): Stmt {
     const operatorToken = this.peek();
@@ -200,11 +256,8 @@ export class Parser {
     do {
       const expression = this.expression();
       let direction = null;
-      if (this.match(TokenType.IDENTIFIER)) {
-        const token = this.previous();
-        if (token.lexeme.toLowerCase() === 'asc' || token.lexeme.toLowerCase() === 'desc') {
-            direction = token;
-        }
+      if (this.match(TokenType.ASC, TokenType.DESC)) {
+        direction = this.previous();
       }
       columns.push({ expression, direction });
     } while (this.match(TokenType.COMMA));
@@ -215,7 +268,7 @@ export class Parser {
   private limitStatement(): Stmt {
     const count = this.expression();
     let offset = null;
-    if (this.match(TokenType.IDENTIFIER)) {
+    if (this.match(TokenType.OFFSET)) {
       offset = this.expression();
     }
     return new LimitStmt(count, offset);
@@ -271,8 +324,33 @@ export class Parser {
   }
 
   private expression(): Expr {
-    return this.equality();
+    return this.logicalOr();
   }
+
+  private logicalOr(): Expr {
+    let expr = this.logicalAnd();
+
+    while (this.match(TokenType.OR)) {
+      const operator = this.previous();
+      const right = this.logicalAnd();
+      expr = new Logical(expr, operator, right);
+    }
+
+    return expr;
+  }
+
+  private logicalAnd(): Expr {
+    let expr = this.equality();
+
+    while (this.match(TokenType.AND)) {
+      const operator = this.previous();
+      const right = this.equality();
+      expr = new Logical(expr, operator, right);
+    }
+
+    return expr;
+  }
+
 
   private equality(): Expr {
     let expr = this.comparison();
@@ -343,7 +421,8 @@ export class Parser {
     let expr = this.primary();
 
     while (true) {
-      if (this.match(TokenType.LEFT_PAREN)) {
+      if (this.check(TokenType.LEFT_PAREN)) {
+        this.advance(); // consume '('
         expr = this.finishCall(expr);
       } else if (this.match(TokenType.DOT)) {
         const name = this.consume(
@@ -361,6 +440,16 @@ export class Parser {
 
   private finishCall(callee: Expr): Expr {
     let args: Expr[] = [];
+    if (callee instanceof Variable && (callee.name.lexeme.toLowerCase() === 'cast' || callee.name.lexeme.toLowerCase() === 'safe_cast')) {
+        const expression = this.expression();
+        this.consume(TokenType.AS, "Expect 'AS' in cast expression.");
+        const type = this.expression(); // for now, we parse type as an expression
+        args.push(expression, type);
+        this.consume(TokenType.RIGHT_PAREN, "Expect ')' after cast.");
+        return new Call(callee, this.previous(), args);
+    }
+
+
     if (!this.check(TokenType.RIGHT_PAREN)) {
       do {
         if (args.length >= 255) {
@@ -378,18 +467,43 @@ export class Parser {
     return new Call(callee, paren, args);
   }
 
+  private caseExpression(): Expr {
+    const cases: { condition: Expr; result: Expr }[] = [];
+    let elseBranch: Expr | null = null;
+
+    while (this.match(TokenType.WHEN)) {
+      const condition = this.expression();
+      this.consume(TokenType.THEN, "Expect 'THEN' after WHEN condition.");
+      const result = this.expression();
+      cases.push({ condition, result });
+    }
+
+    if (this.match(TokenType.ELSE)) {
+      elseBranch = this.expression();
+    }
+
+    this.consume(TokenType.END, "Expect 'END' after CASE statement.");
+    return new CaseExpr(cases, elseBranch);
+  }
+
   private primary(): Expr {
     if (this.match(TokenType.FALSE)) return new Literal(false);
     if (this.match(TokenType.TRUE)) return new Literal(true);
-    if (this.match(TokenType.NIL)) return new Literal(null);
+    if (this.match(TokenType.NULL)) return new Literal(null);
 
-    if (this.match(TokenType.NUMBER, TokenType.STRING)) {
+    if (this.match(TokenType.NUMBER, TokenType.STRING_LITERAL)) {
       return new Literal(this.previous().literal);
     }
 
-    if(this.match(TokenType.IDENTIFIER)) {
+    if (this.isDataType(this.peek())) {
+      return new Variable(this.advance());
+    }
+
+    if(this.match(TokenType.IDENTIFIER, TokenType.SAFE_CAST, TokenType.IF, TokenType.CASE, TokenType.OVER)) {
         return new Variable(this.previous());
     }
+
+    if (this.match(TokenType.CASE)) return this.caseExpression();
 
     if (this.match(TokenType.LEFT_PAREN)) {
       const expr = this.expression();

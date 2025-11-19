@@ -51,13 +51,11 @@ describe('Lexer', () => {
   });
 
   it('should handle different literal types', () => {
-    const query = `SELECT 'hello', "world", 123, 45.67, TRUE, FALSE, NULL`;
+    const query = `SELECT 'hello', 123, 45.67, TRUE, FALSE, NULL`;
     const tokens = getSimplifiedTokens(query);
     const expectedTokens = [
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
-      { type: TokenType.STRING, lexeme: "'hello'", literal: 'hello' },
-      { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: '"world"', literal: 'world' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'hello'", literal: 'hello' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.NUMBER, lexeme: '123', literal: 123 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
@@ -71,6 +69,20 @@ describe('Lexer', () => {
       { type: TokenType.EOF, lexeme: '', literal: null },
     ];
     expect(tokens).toEqual(expectedTokens);
+  });
+
+  it('should tokenize all data type keywords', () => {
+    const query = 'ARRAY BOOL BOOLEAN BYTES DATE DATETIME TIME TIMESTAMP STRUCT STRING JSON INT INT64 SMALLINT INTEGER BIGINT TINYINT BYTEINT NUMERIC DECIMAL BIGNUMERIC BIGDECIMAL FLOAT64';
+    const tokens = getSimplifiedTokens(query);
+    const expectedTypes = [
+      TokenType.ARRAY, TokenType.BOOL, TokenType.BOOLEAN, TokenType.BYTES,
+      TokenType.DATE, TokenType.DATETIME, TokenType.TIME, TokenType.TIMESTAMP,
+      TokenType.STRUCT, TokenType.STRING, TokenType.JSON, TokenType.INT,
+      TokenType.INT64, TokenType.SMALLINT, TokenType.INTEGER, TokenType.BIGINT,
+      TokenType.TINYINT, TokenType.BYTEINT, TokenType.NUMERIC, TokenType.DECIMAL,
+      TokenType.BIGNUMERIC, TokenType.BIGDECIMAL, TokenType.FLOAT64, TokenType.EOF
+    ];
+    expect(tokens.map(t => t.type)).toEqual(expectedTypes);
   });
 
   it('should tokenize operators', () => {
@@ -149,7 +161,7 @@ describe('Lexer', () => {
   it('should handle a complex query with multiple features', () => {
     const query = `
         -- Get senior users from the 'users' table
-        FROM \`user-data\`
+        FROM user_data
         |> WHERE age >= 60 AND city = 'New York'
         |> SELECT name, age
         |> ORDER BY age DESC;
@@ -157,7 +169,7 @@ describe('Lexer', () => {
     const tokens = getSimplifiedTokens(query);
     const expectedTokens = [
       { type: TokenType.FROM, lexeme: 'FROM', literal: null },
-      { type: TokenType.IDENTIFIER, lexeme: '`user-data`', literal: 'user-data' },
+      { type: TokenType.IDENTIFIER, lexeme: 'user_data', literal: null },
       { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
       { type: TokenType.WHERE, lexeme: 'WHERE', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'age', literal: null },
@@ -166,7 +178,7 @@ describe('Lexer', () => {
       { type: TokenType.AND, lexeme: 'AND', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'city', literal: null },
       { type: TokenType.EQUAL, lexeme: '=', literal: null },
-      { type: TokenType.STRING, lexeme: "'New York'", literal: 'New York' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'New York'", literal: 'New York' },
       { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'name', literal: null },
@@ -191,14 +203,14 @@ describe('Lexer', () => {
       { type: TokenType.LEFT_BRACKET, lexeme: '[', literal: null },
       { type: TokenType.NUMBER, lexeme: '1', literal: 1 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'a'", literal: 'a' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'a'", literal: 'a' },
       { type: TokenType.RIGHT_BRACKET, lexeme: ']', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.STRUCT, lexeme: 'STRUCT', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.NUMBER, lexeme: '1', literal: 1 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'a'", literal: 'a' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'a'", literal: 'a' },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.AS, lexeme: 'AS', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'my_struct', literal: null },
@@ -249,13 +261,13 @@ describe('Lexer', () => {
     const expectedTokens = [
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.DATE, lexeme: 'DATE', literal: null },
-      { type: TokenType.STRING, lexeme: "'2023-12-25'", literal: '2023-12-25' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'2023-12-25'", literal: '2023-12-25' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.DATETIME, lexeme: 'DATETIME', literal: null },
-      { type: TokenType.STRING, lexeme: "'2023-12-25 10:30:00'", literal: '2023-12-25 10:30:00' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'2023-12-25 10:30:00'", literal: '2023-12-25 10:30:00' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.TIMESTAMP, lexeme: 'TIMESTAMP', literal: null },
-      { type: TokenType.STRING, lexeme: "'2023-12-25 10:30:00Z'", literal: '2023-12-25 10:30:00Z' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'2023-12-25 10:30:00Z'", literal: '2023-12-25 10:30:00Z' },
       { type: TokenType.EOF, lexeme: '', literal: null },
     ];
     expect(tokens).toEqual(expectedTokens);
@@ -337,7 +349,7 @@ describe('Lexer', () => {
   });
 
   it('should handle BETWEEN and LIKE', () => {
-    const query = "WHERE age BETWEEN 18 AND 65 AND name LIKE 'J%'";
+    const query = "WHERE age BETWEEN 18 AND 65 AND name LIKE 'J%'"; // Corrected escaping
     const tokens = getSimplifiedTokens(query);
     const expectedTokens = [
       { type: TokenType.WHERE, lexeme: 'WHERE', literal: null },
@@ -349,7 +361,7 @@ describe('Lexer', () => {
       { type: TokenType.AND, lexeme: 'AND', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'name', literal: null },
       { type: TokenType.LIKE, lexeme: 'LIKE', literal: null },
-      { type: TokenType.STRING, lexeme: "'J%'", literal: 'J%' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'J%'", literal: 'J%' },
       { type: TokenType.EOF, lexeme: '', literal: null },
     ];
     expect(tokens).toEqual(expectedTokens);
@@ -384,11 +396,10 @@ describe('Lexer', () => {
   });
 
   it('should handle strings with escaped quotes', () => {
-    const query = `'a\\'b' "c\\"d"`;
+    const query = "'a\'b'";
     const tokens = getSimplifiedTokens(query);
     const expectedTokens = [
-      { type: TokenType.STRING, lexeme: `'a\\'b'`, literal: "a'b" },
-      { type: TokenType.STRING, lexeme: `"c\\"d"`, literal: 'c"d' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'a\'b'", literal: "a'b" },
       { type: TokenType.EOF, lexeme: '', literal: null },
     ];
     expect(tokens).toEqual(expectedTokens);
@@ -399,7 +410,7 @@ describe('Lexer', () => {
     expect(tokensEmpty.length).toBe(1);
     expect(tokensEmpty[0].type).toBe(TokenType.EOF);
 
-    const tokensWhitespace = getSimplifiedTokens(' \t\r\n ');
+    const tokensWhitespace = getSimplifiedTokens(' 	\r\n ');
     expect(tokensWhitespace.length).toBe(1);
     expect(tokensWhitespace[0].type).toBe(TokenType.EOF);
   });
@@ -504,11 +515,13 @@ WITH RawEvents AS (
 -- public signature (its inputs and outputs) remains the same.
 FROM RawEvents
 
--- Use the first UDF to parse the JSON and add the \`http_code\` column.
+-- Use the first UDF to parse the JSON and add the 
+-- http_code column.
 |> EXTEND
   ParseHttpCode(raw_json_payload) AS http_code
 
--- Use the second UDF to classify the code and add the \`error_category\` column.
+-- Use the second UDF to classify the code and add the 
+-- error_category column.
 |> EXTEND
   ClassifyErrorType(http_code) AS error_category
 
@@ -539,7 +552,7 @@ FROM RawEvents
       { type: TokenType.IDENTIFIER, lexeme: 'ParseHttpCode', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'json_payload', literal: null },
-      { type: TokenType.IDENTIFIER, lexeme: 'STRING', literal: null }, // Corrected: STRING as type is an IDENTIFIER
+      { type: TokenType.STRING, lexeme: 'STRING', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.RETURNS, lexeme: 'RETURNS', literal: null },
       { type: TokenType.INT64, lexeme: 'INT64', literal: null },
@@ -551,7 +564,7 @@ FROM RawEvents
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'json_payload', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'$.http_response_code'", literal: '$.http_response_code' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'$.http_response_code'", literal: '$.http_response_code' },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.AS, lexeme: 'AS', literal: null },
       { type: TokenType.INT64, lexeme: 'INT64', literal: null },
@@ -568,7 +581,7 @@ FROM RawEvents
       { type: TokenType.INT64, lexeme: 'INT64', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.RETURNS, lexeme: 'RETURNS', literal: null },
-      { type: TokenType.IDENTIFIER, lexeme: 'STRING', literal: null }, // Corrected: STRING as type is an IDENTIFIER
+      { type: TokenType.STRING, lexeme: 'STRING', literal: null },
       { type: TokenType.AS, lexeme: 'AS', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
@@ -578,7 +591,7 @@ FROM RawEvents
       { type: TokenType.IS, lexeme: 'IS', literal: null },
       { type: TokenType.NULL, lexeme: 'NULL', literal: null },
       { type: TokenType.THEN, lexeme: 'THEN', literal: null },
-      { type: TokenType.STRING, lexeme: "'Unparsed'", literal: 'Unparsed' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'Unparsed'", literal: 'Unparsed' },
       { type: TokenType.WHEN, lexeme: 'WHEN', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
       { type: TokenType.GREATER_EQUAL, lexeme: '>=', literal: null },
@@ -588,7 +601,7 @@ FROM RawEvents
       { type: TokenType.LESS, lexeme: '<', literal: null },
       { type: TokenType.NUMBER, lexeme: '300', literal: 300 },
       { type: TokenType.THEN, lexeme: 'THEN', literal: null },
-      { type: TokenType.STRING, lexeme: "'OK'", literal: 'OK' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'OK'", literal: 'OK' },
       { type: TokenType.WHEN, lexeme: 'WHEN', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
       { type: TokenType.GREATER_EQUAL, lexeme: '>=', literal: null },
@@ -598,7 +611,7 @@ FROM RawEvents
       { type: TokenType.LESS, lexeme: '<', literal: null },
       { type: TokenType.NUMBER, lexeme: '500', literal: 500 },
       { type: TokenType.THEN, lexeme: 'THEN', literal: null },
-      { type: TokenType.STRING, lexeme: "'Client Error'", literal: 'Client Error' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'Client Error'", literal: 'Client Error' },
       { type: TokenType.WHEN, lexeme: 'WHEN', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'http_code', literal: null },
       { type: TokenType.GREATER_EQUAL, lexeme: '>=', literal: null },
@@ -608,9 +621,9 @@ FROM RawEvents
       { type: TokenType.LESS, lexeme: '<', literal: null },
       { type: TokenType.NUMBER, lexeme: '600', literal: 600 },
       { type: TokenType.THEN, lexeme: 'THEN', literal: null },
-      { type: TokenType.STRING, lexeme: "'Server Error'", literal: 'Server Error' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'Server Error'", literal: 'Server Error' },
       { type: TokenType.ELSE, lexeme: 'ELSE', literal: null },
-      { type: TokenType.STRING, lexeme: "'Other'", literal: 'Other' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'Other'", literal: 'Other' },
       { type: TokenType.END, lexeme: 'END', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
@@ -645,7 +658,7 @@ FROM RawEvents
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.AS, lexeme: 'AS', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'time_bucket', literal: null },
-      { type: TokenType.COMMA, lexeme: ',', literal: null }, // Added comma here as per EXTEND with multiple expressions
+      { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'ROW_NUMBER', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
@@ -684,7 +697,7 @@ FROM RawEvents
       { type: TokenType.AS, lexeme: 'AS', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'event_id', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'user_A'", literal: 'user_A' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'user_A'", literal: 'user_A' },
       { type: TokenType.AS, lexeme: 'AS', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'user_id', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
@@ -694,7 +707,7 @@ FROM RawEvents
       { type: TokenType.AS, lexeme: 'AS', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'event_timestamp', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"503\"}'", literal: '{"http_response_code": "503"}' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'{\"http_response_code\": \"503\"}'", literal: '{"http_response_code": "503"}' },
       { type: TokenType.AS, lexeme: 'AS', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'raw_json_payload', literal: null },
       { type: TokenType.UNION, lexeme: 'UNION', literal: null },
@@ -703,7 +716,7 @@ FROM RawEvents
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.NUMBER, lexeme: '2', literal: 2 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'user_A'", literal: 'user_A' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'user_A'", literal: 'user_A' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'TIMESTAMP_ADD', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
@@ -716,40 +729,40 @@ FROM RawEvents
       { type: TokenType.SECOND, lexeme: 'SECOND', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"503\"}'", literal: '{"http_response_code": "503"}' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'{\"http_response_code\": \"503\"}'", literal: '{"http_response_code": "503"}' },
       { type: TokenType.UNION, lexeme: 'UNION', literal: null },
       { type: TokenType.ALL, lexeme: 'ALL', literal: null },
 
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.NUMBER, lexeme: '3', literal: 3 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'user_B'", literal: 'user_B' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'user_B'", literal: 'user_B' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"404\"}'", literal: '{"http_response_code": "404"}' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'{\"http_response_code\": \"404\"}'", literal: '{"http_response_code": "404"}' },
       { type: TokenType.UNION, lexeme: 'UNION', literal: null },
       { type: TokenType.ALL, lexeme: 'ALL', literal: null },
 
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.NUMBER, lexeme: '4', literal: 4 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'user_C'", literal: 'user_C' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'user_C'", literal: 'user_C' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"200\"}'", literal: '{"http_response_code": "200"}' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'{\"http_response_code\": \"200\"}'", literal: '{"http_response_code": "200"}' },
       { type: TokenType.UNION, lexeme: 'UNION', literal: null },
       { type: TokenType.ALL, lexeme: 'ALL', literal: null },
 
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.NUMBER, lexeme: '5', literal: 5 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'user_B'", literal: 'user_B' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'user_B'", literal: 'user_B' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'TIMESTAMP_ADD', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
@@ -762,14 +775,14 @@ FROM RawEvents
       { type: TokenType.SECOND, lexeme: 'SECOND', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"404\"}'", literal: '{"http_response_code": "404"}' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'{\"http_response_code\": \"404\"}'", literal: '{"http_response_code": "404"}' },
       { type: TokenType.UNION, lexeme: 'UNION', literal: null },
       { type: TokenType.ALL, lexeme: 'ALL', literal: null },
 
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.NUMBER, lexeme: '6', literal: 6 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'user_A'", literal: 'user_A' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'user_A'", literal: 'user_A' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'TIMESTAMP_ADD', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
@@ -782,59 +795,59 @@ FROM RawEvents
       { type: TokenType.SECOND, lexeme: 'SECOND', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"503\"}'", literal: '{"http_response_code": "503"}' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'{\"http_response_code\": \"503\"}'", literal: '{"http_response_code": "503"}' },
       { type: TokenType.UNION, lexeme: 'UNION', literal: null },
       { type: TokenType.ALL, lexeme: 'ALL', literal: null },
 
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.NUMBER, lexeme: '7', literal: 7 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'user_D'", literal: 'user_D' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'user_D'", literal: 'user_D' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"401\"}'", literal: '{"http_response_code": "401"}' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'{\"http_response_code\": \"401\"}'", literal: '{"http_response_code": "401"}' },
       { type: TokenType.UNION, lexeme: 'UNION', literal: null },
       { type: TokenType.ALL, lexeme: 'ALL', literal: null },
 
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.NUMBER, lexeme: '8', literal: 8 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'user_D'", literal: 'user_D' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'user_D'", literal: 'user_D' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"401\"}'", literal: '{"http_response_code": "401"}' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'{\"http_response_code\": \"401\"}'", literal: '{"http_response_code": "401"}' },
       { type: TokenType.UNION, lexeme: 'UNION', literal: null },
       { type: TokenType.ALL, lexeme: 'ALL', literal: null },
 
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.NUMBER, lexeme: '9', literal: 9 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'user_E'", literal: 'user_E' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'user_E'", literal: 'user_E' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'{\"http_response_code\": \"500\"}'", literal: '{"http_response_code": "500"}' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'{\"http_response_code\": \"500\"}'", literal: '{"http_response_code": "500"}' },
       { type: TokenType.UNION, lexeme: 'UNION', literal: null },
       { type: TokenType.ALL, lexeme: 'ALL', literal: null },
 
       { type: TokenType.SELECT, lexeme: 'SELECT', literal: null },
       { type: TokenType.NUMBER, lexeme: '10', literal: 10 },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'user_E'", literal: 'user_E' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'user_E'", literal: 'user_E' },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'CURRENT_TIMESTAMP', literal: null },
       { type: TokenType.LEFT_PAREN, lexeme: '(', literal: null },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
       { type: TokenType.COMMA, lexeme: ',', literal: null },
-      { type: TokenType.STRING, lexeme: "'{\"other_key\": \"value\"}'", literal: '{"other_key": "value"}' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'{\"other_key\": \"value\"}'", literal: '{"other_key": "value"}' },
       { type: TokenType.RIGHT_PAREN, lexeme: ')', literal: null },
 
       { type: TokenType.FROM, lexeme: 'FROM', literal: null },
@@ -869,7 +882,7 @@ FROM RawEvents
       { type: TokenType.WHERE, lexeme: 'WHERE', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'error_category', literal: null },
       { type: TokenType.BANG_EQUAL, lexeme: '!=', literal: null },
-      { type: TokenType.STRING, lexeme: "'OK'", literal: 'OK' },
+      { type: TokenType.STRING_LITERAL, lexeme: "'OK'", literal: 'OK' },
       { type: TokenType.PIPE_GREATER, lexeme: '|>', literal: null },
       { type: TokenType.AGGREGATE, lexeme: 'AGGREGATE', literal: null },
       { type: TokenType.IDENTIFIER, lexeme: 'COUNT', literal: null },

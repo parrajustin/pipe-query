@@ -35,7 +35,7 @@ export enum TokenType {
 
   // Literals
   IDENTIFIER = 'IDENTIFIER',
-  STRING = 'STRING',
+  STRING_LITERAL = 'STRING_LITERAL',
   NUMBER = 'NUMBER',
 
   // Keywords
@@ -49,8 +49,6 @@ export enum TokenType {
   CALL = 'CALL',
   CASE = 'CASE',
   CREATE = 'CREATE',
-  DATE = 'DATE',
-  DATETIME = 'DATETIME',
   DAY = 'DAY',
   DESC = 'DESC',
   DISTINCT = 'DISTINCT',
@@ -66,7 +64,6 @@ export enum TokenType {
   IF = 'IF',
   IN = 'IN',
   INNER = 'INNER',
-  INT64 = 'INT64',
   INTERVAL = 'INTERVAL',
   IS = 'IS',
   JOIN = 'JOIN',
@@ -76,6 +73,7 @@ export enum TokenType {
   NOT = 'NOT',
   NULL = 'NULL',
   ON = 'ON',
+  OFFSET = 'OFFSET',
   OR = 'OR',
   ORDER = 'ORDER',
   OUTER = 'OUTER',
@@ -88,11 +86,9 @@ export enum TokenType {
   SECOND = 'SECOND',
   SELECT = 'SELECT',
   SET = 'SET',
-  STRUCT = 'STRUCT',
   TABLE = 'TABLE',
   TEMP = 'TEMP',
   THEN = 'THEN',
-  TIMESTAMP = 'TIMESTAMP',
   TRUE = 'TRUE',
   UNION = 'UNION',
   WHEN = 'WHEN',
@@ -100,6 +96,32 @@ export enum TokenType {
   WINDOW = 'WINDOW',
   WITH = 'WITH',
   YEAR = 'YEAR',
+
+  // Data Types
+  ARRAY = 'ARRAY',
+  BOOL = 'BOOL',
+  BOOLEAN = 'BOOLEAN',
+  BYTES = 'BYTES',
+  DATE = 'DATE',
+  DATETIME = 'DATETIME',
+  TIME = 'TIME',
+  TIMESTAMP = 'TIMESTAMP',
+  STRUCT = 'STRUCT',
+  STRING = 'STRING',
+  JSON = 'JSON',
+  INT = 'INT',
+  INT64 = 'INT64',
+  SMALLINT = 'SMALLINT',
+  INTEGER = 'INTEGER',
+  BIGINT = 'BIGINT',
+  TINYINT = 'TINYINT',
+  BYTEINT = 'BYTEINT',
+  NUMERIC = 'NUMERIC',
+  DECIMAL = 'DECIMAL',
+  BIGNUMERIC = 'BIGNUMERIC',
+  BIGDECIMAL = 'BIGDECIMAL',
+  FLOAT64 = 'FLOAT64',
+
 
   // Other
   COMMENT = 'COMMENT',
@@ -150,7 +172,6 @@ export class Lexer {
     if: TokenType.IF,
     in: TokenType.IN,
     inner: TokenType.INNER,
-    int64: TokenType.INT64,
     interval: TokenType.INTERVAL,
     is: TokenType.IS,
     join: TokenType.JOIN,
@@ -160,6 +181,7 @@ export class Lexer {
     not: TokenType.NOT,
     null: TokenType.NULL,
     on: TokenType.ON,
+    offset: TokenType.OFFSET,
     or: TokenType.OR,
     order: TokenType.ORDER,
     outer: TokenType.OUTER,
@@ -184,6 +206,26 @@ export class Lexer {
     window: TokenType.WINDOW,
     with: TokenType.WITH,
     year: TokenType.YEAR,
+    // Data Types
+    array: TokenType.ARRAY,
+    bool: TokenType.BOOL,
+    boolean: TokenType.BOOLEAN,
+    bytes: TokenType.BYTES,
+    time: TokenType.TIME,
+    string: TokenType.STRING,
+    json: TokenType.JSON,
+    int: TokenType.INT,
+    int64: TokenType.INT64,
+    smallint: TokenType.SMALLINT,
+    integer: TokenType.INTEGER,
+    bigint: TokenType.BIGINT,
+    tinyint: TokenType.TINYINT,
+    byteint: TokenType.BYTEINT,
+    numeric: TokenType.NUMERIC,
+    decimal: TokenType.DECIMAL,
+    bignumeric: TokenType.BIGNUMERIC,
+    bigdecimal: TokenType.BIGDECIMAL,
+    float64: TokenType.FLOAT64,
   };
 
   constructor(source: string) {
@@ -316,7 +358,6 @@ export class Lexer {
         this.col = 0;
         break;
 
-      case '"':
       case "'":
         this.string(c);
         break;
@@ -398,10 +439,10 @@ export class Lexer {
       throw new Error(`[line ${this.line}] Error: Unterminated string.`);
     }
 
-    // The closing ".
+    // The closing quote.
     this.advance();
 
-    this.addToken(TokenType.STRING, value);
+    this.addToken(TokenType.STRING_LITERAL, value);
   }
 
   private quotedIdentifier(): void {

@@ -14,10 +14,24 @@ export interface ExprVisitor<R> {
   visitUnaryExpr(expr: Unary, row?: any, dataContext?: any): R;
   visitVariableExpr(expr: Variable, row?: any, dataContext?: any): R;
   visitGetExpr(expr: Get, row?: any, dataContext?: any): R;
+  visitCaseExpr(expr: CaseExpr, row?: any, dataContext?: any): R;
 }
 
 export abstract class Expr {
   abstract accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R;
+}
+
+export class CaseExpr extends Expr {
+    constructor(
+        public readonly cases: { condition: Expr; result: Expr }[],
+        public readonly elseBranch: Expr | null
+    ) {
+        super();
+    }
+
+    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
+        return visitor.visitCaseExpr(this, row, dataContext);
+    }
 }
 
 export class Assign extends Expr {
@@ -150,10 +164,32 @@ export interface StmtVisitor<R> {
   visitAsStmt(stmt: AsStmt): R;
   visitCallStmt(stmt: CallStmt): R;
   visitSetStmt(stmt: SetStmt): R;
+  visitCreateFunctionStmt(stmt: CreateFunctionStmt): R;
 }
 
 export abstract class Stmt {
     abstract accept<R>(visitor: StmtVisitor<R>): R;
+}
+
+export interface FunctionParam {
+    name: Token;
+    type: Token;
+}
+
+export class CreateFunctionStmt extends Stmt {
+    constructor(
+        public readonly name: Token,
+        public readonly params: FunctionParam[],
+        public readonly returnType: Token | null,
+        public readonly body: Expr,
+        public readonly table: boolean,
+    ) {
+        super();
+    }
+
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitCreateFunctionStmt(this);
+    }
 }
 
 export class ExpressionStmt extends Stmt {
@@ -313,6 +349,16 @@ export class SetStmt extends PipeOperatorStmt {
 
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitSetStmt(this);
+    }
+}
+
+export class CallStmt extends PipeOperatorStmt {
+    constructor(public readonly name: Token, public readonly args: Expr[]) {
+        super();
+    }
+
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitCallStmt(this);
     }
 }
 
