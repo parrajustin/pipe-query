@@ -1,4 +1,8 @@
-import { Token } from './lexer';
+
+export interface Token {
+  value: any;
+  [key: string]: any;
+}
 
 // =============================================================================
 // Expressions
