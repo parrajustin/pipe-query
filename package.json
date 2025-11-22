@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "compile:grammar": "nearleyc src/parser/grammar.ne -o src/parser/grammar.ts"
+    "compile:grammar": "nearleyc src/parser/grammar.ne -o src/parser/grammar.ts",
+    "compile:grammar:test": "nearleyc src/parser/grammar.ne -o dist/grammar.js",
+    "nearley:railroad": "nearley-railroad src/parser/grammar.ne -o grammar.html",
+    "nearley:unparse": "nearley-unparse grammar.js"
   },
   "repository": {
     "type": "git",
@@ -14,7 +17,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "bugs": {
     "url": "https://github.com/parrajustin/pipe-query/issues"
   },
@@ -29,7 +31,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "nearley": "^2.20.1",
+    "grammar-well": "file:../grammar-well",
+    "moo": "^0.5.2",
     "tslib": "^2.8.1"
   }
 }
