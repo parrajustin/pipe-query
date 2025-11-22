@@ -67,31 +67,24 @@ The following is a mock grammar for creating UDFs, defined in the Grammar-Well f
 grammar {
   [CreateFunctionStatement]:
     | "CREATE" ("OR" "REPLACE")? ("TEMPORARY" | "TEMP")? "FUNCTION" ("IF" "NOT" "EXISTS")? FunctionName "(" FunctionParameters? ")" (SqlFunctionDefinition | JsFunctionDefinition)
-    ;
 
   [SqlFunctionDefinition]:
     | ReturnsClause? "AS" "(" SqlFunctionBody ")"
-    ;
 
   [JsFunctionDefinition]:
     | ReturnsClause DeterminismSpecifier? LanguageClause "AS" JsFunctionBodyString OptionsClause?
-    ;
 
   [FunctionName]:
     | Identifier ("." Identifier)*
-    ;
 
   [FunctionParameters]:
     | FunctionParameter ("," FunctionParameter)*
-    ;
 
   [FunctionParameter]:
     | Identifier (DataType | "ANY" "TYPE") ("DEFAULT" Expression)?
-    ;
 
   [ReturnsClause]:
     | "RETURNS" DataType
-    ;
 
   [DeterminismSpecifier]:
     | "DETERMINISTIC"
@@ -99,31 +92,24 @@ grammar {
     | "IMMUTABLE"
     | "STABLE"
     | "VOLATILE"
-    ;
 
   [LanguageClause]:
     | "LANGUAGE" "js"
-    ;
 
   [OptionsClause]:
     | "OPTIONS" "(" OptionList ")"
-    ;
 
   [OptionList]:
     | OptionItem ("," OptionItem)*
-    ;
 
   [OptionItem]:
     | Identifier "=" Expression
-    ;
 
   [JsFunctionBodyString]:
     | StringLiteral
-    ;
 
   [SqlFunctionBody]:
     | Expression
-    ;
 
   [DataType]:
     | "ARRAY" "<" DataType ">"
@@ -143,15 +129,12 @@ grammar {
     | "STRUCT" ("<" StructFields ">" | "(" StructFields ")")?
     | "TIME"
     | "TIMESTAMP"
-    ;
 
   [StructFields]:
     | StructField ("," StructField)*
-    ;
 
   [StructField]:
     | (Identifier)? DataType
-    ;
 
   # Simplified Expression and Literal definitions for completeness of the mock grammar
   [Expression]:
@@ -160,11 +143,9 @@ grammar {
     | Expression Operator Expression
     | "(" Expression ")"
     | FunctionCall
-    ;
 
   [FunctionCall]:
     | FunctionName "(" (Expression ("," Expression)*)? ")"
-    ;
 
   [Literal]:
     | StringLiteral
@@ -172,7 +153,6 @@ grammar {
     | FloatLiteral
     | BooleanLiteral
     | NullLiteral
-    ;
 
   [StringLiteral]:
     | r:{'([^'\\]|\\.)*'}
@@ -181,31 +161,24 @@ grammar {
     | r:{r"([^"\\]|\\.)*"}
     | r:{'''((?!''').)*'''}
     | r:{"""((?!""").)*"""}
-    ;
 
   [IntegerLiteral]:
     | r:{[0-9]+}
-    ;
 
   [FloatLiteral]:
     | r:{[0-9]*\.[0-9]+([eE][+-]?[0-9]+)?}
-    ;
 
   [BooleanLiteral]:
     | "TRUE" | "FALSE"
-    ;
 
   [NullLiteral]:
     | "NULL"
-    ;
 
   [Identifier]:
     | r:{[a-zA-Z_][a-zA-Z0-9_]*}
     | r:{`[^`]+`}
-    ;
 
   [Operator]:
     | "+" | "-" | "*" | "/" | "=" | "<" | ">" | "<=" | ">=" | "!=" | "<>"
-    ;
 }
 ```
