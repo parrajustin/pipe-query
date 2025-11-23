@@ -68,25 +68,66 @@ The following is a mock grammar for creating UDFs, defined in the Grammar-Well f
 ```grammar
 grammar {
   [CreateFunctionStatement]:
-    | "CREATE" ("OR" "REPLACE")? ("TEMPORARY" | "TEMP")? "FUNCTION" ("IF" "NOT" "EXISTS")? FunctionName "(" FunctionParameters? ")" (SqlFunctionDefinition | JsFunctionDefinition)
+    | "CREATE" ("OR" "REPLACE")? ("TEMPORARY" | "TEMP")?@temp "FUNCTION" ("IF" "NOT" "EXISTS")? FunctionName@name "(" FunctionParameters?@params ")" (SqlFunctionDefinition | JsFunctionDefinition)@def
+    => {
+      const modifiers = $temp ? [$temp.value] : []; // Extract string value
+      // Flatten params if present, otherwise empty array
+      const parameters = $params || [];
+      return new CreateFunctionStmt(
+        modifiers,
+        $name,
+        parameters,
+        $def.returnType,
+        $def.determinism,
+        $def.language,
+        $def.options,
+        $def.body
+      );
+    }
 
   [SqlFunctionDefinition]:
-    | ReturnsClause? "AS" "(" SqlFunctionBody ")"
+    | ReturnsClause?@ret "AS" "(" SqlFunctionBody@body ")"
+    => {
+      return {
+        returnType: $ret,
+        body: $body,
+        language: null,
+        determinism: null,
+        options: []
+      };
+    }
 
   [JsFunctionDefinition]:
-    | ReturnsClause DeterminismSpecifier? LanguageClause "AS" JsFunctionBodyString OptionsClause?
+    | ReturnsClause@ret DeterminismSpecifier?@det LanguageClause@lang "AS" JsFunctionBodyString@body OptionsClause?@opts
+    => {
+      return {
+        returnType: $ret,
+        body: $body.value, // Extract string value
+        language: $lang,
+        determinism: $det ? $det.value : null,
+        options: $opts || []
+      };
+    }
 
   [FunctionName]:
-    | Identifier ("." Identifier)*
+    | Identifier ("." Identifier)* => ( $0 ) -- Simplified for now, assuming single token or handling elsewhere
 
   [FunctionParameters]:
     | FunctionParameter ("," FunctionParameter)*
+    => {
+      return [$0, ...$1.map(p => p[1])];
+    }
 
   [FunctionParameter]:
-    | Identifier (DataType | "ANY" "TYPE") ("DEFAULT" Expression)?
+    | Identifier@name (DataType | "ANY" "TYPE")@type ("DEFAULT" Expression@def)?
+    => {
+      // Handle ANY TYPE as AnyType node
+      const paramType = $type.length === 2 && $type[0].value === "ANY" ? new AnyType() : $type;
+      return new FunctionParam($name, paramType, $def);
+    }
 
   [ReturnsClause]:
-    | "RETURNS" DataType
+    | "RETURNS" DataType@type => ( $type )
 
   [DeterminismSpecifier]:
     | "DETERMINISTIC"
@@ -96,47 +137,62 @@ grammar {
     | "VOLATILE"
 
   [LanguageClause]:
-    | "LANGUAGE" "js"
+    | "LANGUAGE" "js"@lang => ( $lang.value )
 
   [OptionsClause]:
-    | "OPTIONS" "(" OptionList ")"
+    | "OPTIONS" "(" OptionList@opts ")" => ( $opts )
 
   [OptionList]:
     | OptionItem ("," OptionItem)*
+    => {
+      return [$0, ...$1.map(i => i[1])];
+    }
 
   [OptionItem]:
-    | Identifier "=" Expression
+    | Identifier@key "=" Expression@val
+    => {
+      return { key: $key, value: $val }; // key is now string from Identifier rule
+    }
 
   [JsFunctionBodyString]:
     | r:{r"""((?!""").)*"""}
 
   [SqlFunctionBody]:
-    | Expression
+    | Expression@expr => ( $expr )
 
   [DataType]:
-    | "ARRAY" "<" DataType ">"
-    | "BOOL" | "BOOLEAN"
-    | "BYTES" ("(" IntegerLiteral ")")?
-    | "DATE"
-    | "DATETIME"
-    | "GEOGRAPHY"
-    | "INTERVAL"
-    | "JSON"
-    | "INT64" | "INT" | "SMALLINT" | "INTEGER" | "BIGINT" | "TINYINT" | "BYTEINT"
-    | "NUMERIC" ("(" IntegerLiteral ("," IntegerLiteral)? ")")? | "DECIMAL" ("(" IntegerLiteral ("," IntegerLiteral)? ")")?
-    | "BIGNUMERIC" ("(" IntegerLiteral ("," IntegerLiteral)? ")")? | "BIGDECIMAL" ("(" IntegerLiteral ("," IntegerLiteral)? ")")?
-    | "FLOAT64"
-    | "RANGE" "<" DataType ">"
-    | "STRING" ("(" IntegerLiteral ")")?
-    | "STRUCT" ("<" StructFields ">" | "(" StructFields ")")?
-    | "TIME"
-    | "TIMESTAMP"
+    | "ARRAY" "<" DataType@elem ">" => ( new ArrayType($elem) )
+    | "BOOL" | "BOOLEAN" => ( new SimpleType(SimpleTypeKind.BOOL) )
+    | "BYTES" ("(" IntegerLiteral ")")? => ( new SimpleType(SimpleTypeKind.BYTES) )
+    | "DATE" => ( new SimpleType(SimpleTypeKind.DATE) )
+    | "DATETIME" => ( new SimpleType(SimpleTypeKind.DATETIME) )
+    | "GEOGRAPHY" => ( new SimpleType(SimpleTypeKind.GEOGRAPHY) )
+    | "INTERVAL" => ( new SimpleType(SimpleTypeKind.INTERVAL) )
+    | "JSON" => ( new SimpleType(SimpleTypeKind.JSON) )
+    | "INT64" | "INT" | "SMALLINT" | "INTEGER" | "BIGINT" | "TINYINT" | "BYTEINT" => ( new SimpleType(SimpleTypeKind.INT64) )
+    | "NUMERIC" ("(" IntegerLiteral ("," IntegerLiteral)? ")")? | "DECIMAL" ("(" IntegerLiteral ("," IntegerLiteral)? ")")? => ( new SimpleType(SimpleTypeKind.NUMERIC) )
+    | "BIGNUMERIC" ("(" IntegerLiteral ("," IntegerLiteral)? ")")? | "BIGDECIMAL" ("(" IntegerLiteral ("," IntegerLiteral)? ")")? => ( new SimpleType(SimpleTypeKind.BIGNUMERIC) )
+    | "FLOAT64" => ( new SimpleType(SimpleTypeKind.FLOAT64) )
+    | "RANGE" "<" DataType@elem ">" => ( new SimpleType(SimpleTypeKind.STRING) ) -- Placeholder
+    | "STRING" ("(" IntegerLiteral ")")? => ( new SimpleType(SimpleTypeKind.STRING) )
+    | "STRUCT" ("<" StructFields@fields ">" | "(" StructFields@fields ")")? => ( new StructType($fields || []) )
+    | "TIME" => ( new SimpleType(SimpleTypeKind.TIME) )
+    | "TIMESTAMP" => ( new SimpleType(SimpleTypeKind.TIMESTAMP) )
 
   [StructFields]:
     | StructField ("," StructField)*
+    => {
+      return [$0, ...$1.map(f => f[1])];
+    }
 
   [StructField]:
-    | (Identifier)? DataType
+    | (Identifier)?@name DataType@type
+    => {
+      return { name: $name, type: $type };
+    }
+
+  [Identifier]:
+    | <word> => ( $0.value )
 
   # Expression Grammar
   # The Expression rule and its dependencies are defined in docs/expressions.md

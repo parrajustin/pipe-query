@@ -185,46 +185,88 @@ grammar {
     | PublicTableFunction
 
   [PrivateTableFunction]:
-    | "CREATE" __ ("TEMPORARY" | "TEMP" | "PRIVATE") __ "TABLE" __ "FUNCTION" __
-      <word> "(" FunctionParams? ")" __
-      (ReturnsTableClause __)?
-      "AS" __ "(" __ QueryExpression __ ")" __ ";"
+    | "CREATE" __ ("TEMPORARY" | "TEMP" | "PRIVATE")@mod __ "TABLE" __ "FUNCTION" __
+      <word>@name "(" FunctionParams?@params ")" __
+      (ReturnsTableClause@ret __)?
+      "AS" __ "(" __ QueryExpression@body __ ")" __ ";"
+    => {
+      const modifiers = [$mod.value]; // Extract string
+      const parameters = $params || [];
+      return new CreateTableFunctionStmt(modifiers, $name, parameters, $ret, $body);
+    }
 
   [PublicTableFunction]:
     | "CREATE" __ "PUBLIC" __ "TABLE" __ "FUNCTION" __
-      <word> "(" FunctionParams? ")" __
-      (ReturnsTableClause __)?
-      "AS" __ "(" __ QueryExpression __ ")" __ ";"
+      <word>@name "(" FunctionParams?@params ")" __
+      (ReturnsTableClause@ret __)?
+      "AS" __ "(" __ QueryExpression@body __ ")" __ ";"
+    => {
+      const modifiers = ["PUBLIC"];
+      const parameters = $params || [];
+      return new CreateTableFunctionStmt(modifiers, $name, parameters, $ret, $body);
+    }
 
   [ReturnsTableClause]:
-    | "RETURNS" __ "TABLE" __ "<" __ ColumnDeclarations __ ">"
+    | "RETURNS" __ "TABLE" __ "<" __ ColumnDeclarations@cols __ ">"
+    => {
+      return new TableType($cols);
+    }
 
   [ColumnDeclarations]:
     | ColumnDeclaration
     | ColumnDeclarations "," __ ColumnDeclaration
+    => {
+      return [$0, ...$1.map(c => c[2])];
+    }
 
   [ColumnDeclaration]:
-    | <word> __ <dataType>
+    | <word>@name __ DataType@type
+    => {
+      return { name: $name, type: $type }; // name is now string
+    }
 
   # Update FunctionParam to support ANY TYPE, ANY TABLE, and TABLE<...>
   [FunctionParams]:
     | FunctionParam
     | FunctionParams "," __ FunctionParam
+    => {
+      return [$0, ...$1.map(p => p[2])];
+    }
 
   [FunctionParam]:
-    | <word> __ <dataType> (__ "DEFAULT" __ Expression)?
-    | <word> __ "ANY" __ "TYPE"
-    | <word> __ "ANY" __ "TABLE"
-    | <word> __ "TABLE" __ "<" __ ColumnDeclarations __ ">"
+    | <word>@name __ DataType@type (__ "DEFAULT" __ Expression@def)?
+    => {
+      return new FunctionParam($name, $type, $def);
+    }
+    | <word>@name __ "ANY" __ "TYPE"
+    => {
+      return new FunctionParam($name, new AnyType());
+    }
+    | <word>@name __ "ANY" __ "TABLE"
+    => {
+      return new FunctionParam($name, new AnyTableType());
+    }
+    | <word>@name __ "TABLE" __ "<" __ ColumnDeclarations@cols __ ">"
+    => {
+      return new FunctionParam($name, new TableType($cols));
+    }
     # Value table argument
-    | <word> __ "TABLE" __ "<" __ <dataType> __ ">"
+    | <word>@name __ "TABLE" __ "<" __ DataType@type __ ">"
+    => {
+      return new FunctionParam($name, new TableType([{name: "value", type: $type}]));
+    }
 
   # -----------------------------------------------------------------
   # Query Expression (Pipe Syntax)
   # -----------------------------------------------------------------
 
   [QueryExpression]:
-    | WithClause? FromClause PipeOperator*
+    | WithClause?@with FromClause@from PipeOperator*@pipes
+    => {
+      // Note: WithClause is not currently supported in AST QueryStmt constructor.
+      // We are ignoring it for now as per AST limitations.
+      return new QueryStmt([$from, ...$pipes]);
+    }
 
   [WithClause]:
     | "WITH" __ CteList __
@@ -237,46 +279,103 @@ grammar {
     | <word> __ "AS" __ "(" __ QueryExpression __ ")"
 
   [FromClause]:
-    | "FROM" __ TableExpression
+    | "FROM" __ TableExpression@table
+    => {
+      // Assuming TableExpression returns a string (table name) for simple cases
+      // If it returns something else, we might need a different Stmt or cast.
+      // AST FromStmt: constructor(public readonly table: string)
+      return new FromStmt($table);
+    }
 
   [TableExpression]:
-    | <word> # Table name
-    | FunctionCall # TVF call
-    | "(" __ QueryExpression __ ")" # Subquery
+    | <word> => ( $0.value ) # Table name as string
+    | FunctionCall # TVF call - Not supported in FromStmt yet?
+    | "(" __ QueryExpression __ ")" # Subquery - Not supported in FromStmt yet?
 
   [PipeOperator]:
-    | "|>" __ "SELECT" __ SelectList
-    | "|>" __ "WHERE" __ Expression
-    | "|>" __ "AGGREGATE" __ AggregateList __ ("GROUP" __ "BY" __ GroupList)?
-    | "|>" __ "JOIN" __ TableExpression __ "ON" __ Expression
-    | "|>" __ "EXTEND" __ ExpressionList
-    | "|>" __ "UNION" __ ("ALL" | "DISTINCT")? __ "(" __ QueryExpression __ ")"
-    | "|>" __ "INTERSECT" __ ("DISTINCT")? __ "(" __ QueryExpression __ ")"
-    | "|>" __ "EXCEPT" __ ("DISTINCT")? __ "(" __ QueryExpression __ ")"
-    | "|>" __ "LIMIT" __ <int_lit>
+    | "|>" __ "SELECT" __ SelectList@cols
+    => { return new SelectStmt($cols); }
+    | "|>" __ "WHERE" __ Expression@cond
+    => { return new WhereStmt($cond); }
+    | "|>" __ "AGGREGATE" __ AggregateList@aggs __ ("GROUP" __ "BY" __ GroupList@groups)?
+    => { return new AggregateStmt($aggs, $groups || []); }
+    | "|>" __ "JOIN" __ TableExpression@table __ "ON" __ Expression@cond
+    => {
+       return new JoinStmt($table, $cond, JoinType.INNER);
+    }
+    | "|>" __ "EXTEND" __ ExpressionList@cols
+    => {
+       const columns = $cols.map(e => ({expression: e, alias: null}));
+       return new ExtendStmt(columns);
+    }
+    | "|>" __ "UNION" __ ("ALL" | "DISTINCT")?@mod __ "(" __ QueryExpression@q __ ")"
+    => {
+       const distinct = $mod ? $mod.value === "DISTINCT" : true; // Default UNION is DISTINCT in SQL usually, but pipe syntax?
+       // Pipe syntax UNION is usually DISTINCT unless ALL is specified.
+       // If mod is null, default to DISTINCT? Or ALL? Standard SQL UNION is DISTINCT.
+       return new SetStmt(SetOperator.UNION, $q, distinct);
+    }
+    | "|>" __ "INTERSECT" __ ("DISTINCT")?@mod __ "(" __ QueryExpression@q __ ")"
+    => {
+       return new SetStmt(SetOperator.INTERSECT, $q, true);
+    }
+    | "|>" __ "EXCEPT" __ ("DISTINCT")?@mod __ "(" __ QueryExpression@q __ ")"
+    => {
+       return new SetStmt(SetOperator.EXCEPT, $q, true);
+    }
+    | "|>" __ "LIMIT" __ <int_lit>@count
+    => { return new LimitStmt(new Literal(LiteralKind.INT, parseInt($count.value)), null); }
 
   [SelectList]:
     | SelectItem
     | SelectList "," __ SelectItem
+    => {
+      return [$0, ...$1.map(i => i[2])];
+    }
 
   [SelectItem]:
-    | Expression ("AS" __ <word>)?
+    | Expression@expr ("AS" __ <word>@alias)?
+    => {
+      return { expression: $expr, alias: $alias ? $alias.value : null };
+    }
     | "*"
+    => {
+      return { expression: new Variable("*"), alias: null };
+    }
 
   [AggregateList]:
     | AggregateItem
     | AggregateList "," __ AggregateItem
+    => {
+      return [$0, ...$1.map(i => i[2])];
+    }
 
   [AggregateItem]:
-    | FunctionCall ("AS" __ <word>)?
+    | FunctionCall@call ("AS" __ <word>@alias)?
+    => {
+      return { expression: $call, alias: $alias ? $alias.value : "?" };
+    }
 
   [GroupList]:
     | Expression
     | GroupList "," __ Expression
+    => {
+      // GroupBy expects Variable[]. But grammar allows Expression.
+      // AST mismatch: public readonly groupBy: Variable[]
+      // We will cast/assume Expression is Variable or wrap it?
+      // For now returning Expression array.
+      return [$0, ...$1.map(e => e[2])];
+    }
 
   [ExpressionList]:
     | Expression
     | ExpressionList "," __ Expression
+    => {
+      return [$0, ...$1.map(e => e[2])];
+    }
+
+  [DataType]:
+    | <import: udfs.md:DataType>
 
   # -----------------------------------------------------------------
   # Expressions & Window Functions
@@ -290,30 +389,52 @@ grammar {
   [OrExpression]:
     | AndExpression
     | OrExpression "OR" __ AndExpression
+    => { return new Logical($0, BinaryOperator.OR, $2); }
 
   # 11. Logical AND
   [AndExpression]:
     | NotExpression
     | AndExpression "AND" __ NotExpression
+    => { return new Logical($0, BinaryOperator.AND, $2); }
 
   # 10. Logical NOT
   [NotExpression]:
     | "NOT" __ NotExpression
+    => { return new Unary(UnaryOperator.NOT, $1); }
     | ComparisonExpression
 
   # 9. Comparisons
   [ComparisonExpression]:
     | BitwiseOrExpression
-    | BitwiseOrExpression __ ComparisonOp __ BitwiseOrExpression
+    | BitwiseOrExpression __ ComparisonOp@op __ BitwiseOrExpression
+    => { return new Binary($0, $op, $2); }
     | BitwiseOrExpression __ "IS" __ ("NOT" __)? "NULL"
+    => {
+      return new Binary($0, BinaryOperator.IS, new Literal(LiteralKind.NULL, null));
+    }
     | BitwiseOrExpression __ "IS" __ ("NOT" __)? "TRUE"
+    => { return new Binary($0, BinaryOperator.IS, new Literal(LiteralKind.BOOL, true)); }
     | BitwiseOrExpression __ "IS" __ ("NOT" __)? "FALSE"
+    => { return new Binary($0, BinaryOperator.IS, new Literal(LiteralKind.BOOL, false)); }
     | BitwiseOrExpression __ ("NOT" __)? "IN" __ "(" __ ExpressionList __ ")"
+    => {
+       return new Binary($0, BinaryOperator.IN, new Literal(LiteralKind.STRING, "PLACEHOLDER_LIST"));
+    }
     | BitwiseOrExpression __ ("NOT" __)? "LIKE" __ BitwiseOrExpression
+    => { return new Binary($0, BinaryOperator.LIKE, $2); }
     | BitwiseOrExpression __ ("NOT" __)? "BETWEEN" __ BitwiseOrExpression __ "AND" __ BitwiseOrExpression
+    => {
+       return new Call(new Variable("BETWEEN"), [$0, $2, $4]);
+    }
 
   [ComparisonOp]:
-    | "=" | "!=" | "<>" | "<" | "<=" | ">" | ">="
+    | "=" => ( BinaryOperator.EQUALS )
+    | "!=" => ( BinaryOperator.NOT_EQUALS )
+    | "<>" => ( BinaryOperator.NOT_EQUALS )
+    | "<" => ( BinaryOperator.LESS_THAN )
+    | "<=" => ( BinaryOperator.LESS_THAN_OR_EQUAL )
+    | ">" => ( BinaryOperator.GREATER_THAN )
+    | ">=" => ( BinaryOperator.GREATER_THAN_OR_EQUAL )
 
   # 8. Bitwise OR (|)
   [BitwiseOrExpression]:
@@ -340,29 +461,43 @@ grammar {
   [AdditiveExpression]:
     | MultiplicativeExpression
     | AdditiveExpression __ "+" __ MultiplicativeExpression
+    => { return new Binary($0, BinaryOperator.PLUS, $2); }
     | AdditiveExpression __ "-" __ MultiplicativeExpression
+    => { return new Binary($0, BinaryOperator.MINUS, $2); }
 
   # 3. Multiplicative (*, /, ||)
   [MultiplicativeExpression]:
     | UnaryExpression
     | MultiplicativeExpression __ "*" __ UnaryExpression
+    => { return new Binary($0, BinaryOperator.MULTIPLY, $2); }
     | MultiplicativeExpression __ "/" __ UnaryExpression
+    => { return new Binary($0, BinaryOperator.DIVIDE, $2); }
     | MultiplicativeExpression __ "||" __ UnaryExpression
+    => { return new Binary($0, BinaryOperator.CONCAT, $2); }
 
   # 2. Unary (+, -, ~)
   [UnaryExpression]:
     | "+" __ UnaryExpression
+    => { return new Unary(UnaryOperator.PLUS, $1); }
     | "-" __ UnaryExpression
+    => { return new Unary(UnaryOperator.MINUS, $1); }
     | "~" __ UnaryExpression
+    => { return new Unary(UnaryOperator.BITWISE_NOT, $1); }
     | PostfixExpression
 
   # 1. Postfix (Access) - [], ., OFFSET, ORDINAL
   [PostfixExpression]:
     | PrimaryExpression
-    | PostfixExpression "." <word>
-    | PostfixExpression "[" __ Expression __ "]"
+    | PostfixExpression "." <word>@field
+    => { return new Get($0, $field.value); }
+    | PostfixExpression "[" __ Expression@idx __ "]"
+    => {
+       return new Call(new Variable("GET_INDEX"), [$0, $idx]);
+    }
     | PostfixExpression "[" __ "OFFSET" "(" __ Expression __ ")" __ "]"
+    => { return new Call(new Variable("GET_OFFSET"), [$0, $2]); }
     | PostfixExpression "[" __ "ORDINAL" "(" __ Expression __ ")" __ "]"
+    => { return new Call(new Variable("GET_ORDINAL"), [$0, $2]); }
 
   # 0. Primary Expressions (Atoms)
   [PrimaryExpression]:
@@ -382,11 +517,11 @@ grammar {
 
   # Literals
   [Literal]:
-    | <int_lit>
-    | <float_lit>
-    | <string_lit>
-    | <bool_lit>
-    | <null_lit>
+    | <int_lit> => ( new Literal(LiteralKind.INT, parseInt($0.value)) )
+    | <float_lit> => ( new Literal(LiteralKind.FLOAT, parseFloat($0.value)) )
+    | <string_lit> => ( new Literal(LiteralKind.STRING, $0.value) )
+    | <bool_lit> => ( new Literal(LiteralKind.BOOL, $0.value === 'true') )
+    | <null_lit> => ( new Literal(LiteralKind.NULL, null) )
     | TypedLiteral
 
   [TypedLiteral]:
@@ -401,12 +536,18 @@ grammar {
 
   # Identifiers (Columns, Variables)
   [Identifier]:
-    | <word>
+    | <word> => ( new Variable($0.value) )
 
   # Function Calls (Merged with TVF OverClause support)
   [FunctionCall]:
-    | <word> "(" __ (ExpressionList)? __ ")" (__ OverClause)?
-    | "COUNT" "(" __ "*" __ ")" (__ OverClause)?
+    | <word>@name "(" __ (ExpressionList)?@args __ ")" (__ OverClause)?
+    => {
+      return new Call(new Variable($name.value), $args || []);
+    }
+    | "COUNT"@name "(" __ "*" __ ")" (__ OverClause)?
+    => {
+      return new Call(new Variable($name.value), []);
+    }
 
   [OverClause]:
     | "OVER" __ "(" __ WindowSpecification __ ")"
@@ -443,11 +584,19 @@ grammar {
 
   # CASE Expression
   [CaseExpression]:
-    | "CASE" __ (Expression __)? CaseWhenClauses __ ("ELSE" __ Expression __)? "END"
+    | "CASE" __ (Expression __)?@base CaseWhenClauses@cases __ ("ELSE" __ Expression __)?@elseExpr "END"
+    => {
+      // AST CaseExpr: cases: {condition, result}[], elseBranch
+      // If base is present, we might need to distribute it?
+      // For now, passing cases as is.
+      return new CaseExpr($cases, $elseExpr);
+    }
 
   [CaseWhenClauses]:
-    | "WHEN" __ Expression __ "THEN" __ Expression
-    | CaseWhenClauses __ "WHEN" __ Expression __ "THEN" __ Expression
+    | "WHEN" __ Expression@cond __ "THEN" __ Expression@res
+    => { return [{condition: $cond, result: $res}]; }
+    | CaseWhenClauses __ "WHEN" __ Expression@cond __ "THEN" __ Expression@res
+    => { return [...$0, {condition: $cond, result: $res}]; }
 
   # IF Expression
   [IfExpression]:
@@ -476,8 +625,14 @@ grammar {
 
   # Struct Constructor
   [StructConstructor]:
-    | "STRUCT" "(" __ (ExpressionList)? __ ")"
-    | "STRUCT" "<" __ ColumnDeclarations __ ">" "(" __ (ExpressionList)? __ ")"
+    | "STRUCT" "(" __ (ExpressionList)?@exprs __ ")"
+    => {
+       return new Call(new Variable("STRUCT"), $exprs || []);
+    }
+    | "STRUCT" "<" __ ColumnDeclarations __ ">" "(" __ (ExpressionList)?@exprs __ ")"
+    => {
+       return new Call(new Variable("STRUCT"), $exprs || []);
+    }
 
 }
 ```

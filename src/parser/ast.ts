@@ -1,7 +1,91 @@
 
+// =============================================================================
+// Enums
+// =============================================================================
+
+export enum SimpleTypeKind {
+    INT64 = 'INT64',
+    FLOAT64 = 'FLOAT64',
+    STRING = 'STRING',
+    BOOL = 'BOOL',
+    BYTES = 'BYTES',
+    DATE = 'DATE',
+    DATETIME = 'DATETIME',
+    TIME = 'TIME',
+    TIMESTAMP = 'TIMESTAMP',
+    GEOGRAPHY = 'GEOGRAPHY',
+    INTERVAL = 'INTERVAL',
+    JSON = 'JSON',
+    NUMERIC = 'NUMERIC',
+    BIGNUMERIC = 'BIGNUMERIC'
+}
+
+export enum BinaryOperator {
+    PLUS = '+',
+    MINUS = '-',
+    MULTIPLY = '*',
+    DIVIDE = '/',
+    CONCAT = '||',
+    EQUALS = '=',
+    NOT_EQUALS = '!=',
+    LESS_THAN = '<',
+    LESS_THAN_OR_EQUAL = '<=',
+    GREATER_THAN = '>',
+    GREATER_THAN_OR_EQUAL = '>=',
+    AND = 'AND',
+    OR = 'OR',
+    IS = 'IS',
+    IN = 'IN',
+    LIKE = 'LIKE',
+    BITWISE_OR = '|',
+    BITWISE_XOR = '^',
+    BITWISE_AND = '&',
+    BITWISE_LEFT_SHIFT = '<<',
+    BITWISE_RIGHT_SHIFT = '>>'
+}
+
+export enum UnaryOperator {
+    PLUS = '+',
+    MINUS = '-',
+    NOT = 'NOT',
+    BITWISE_NOT = '~'
+}
+
+export enum LiteralKind {
+    INT = 'INT',
+    FLOAT = 'FLOAT',
+    STRING = 'STRING',
+    BOOL = 'BOOL',
+    NULL = 'NULL'
+}
+
+export enum JoinType {
+    INNER = 'INNER',
+    LEFT = 'LEFT',
+    RIGHT = 'RIGHT',
+    FULL = 'FULL',
+    CROSS = 'CROSS'
+}
+
+export enum SetOperator {
+    UNION = 'UNION',
+    INTERSECT = 'INTERSECT',
+    EXCEPT = 'EXCEPT'
+}
+
+export enum OrderByDirection {
+    ASC = 'ASC',
+    DESC = 'DESC'
+}
+
+// =============================================================================
+// Base Interfaces
+// =============================================================================
+
 export interface Token {
-    value: any;
-    [key: string]: any;
+    value: string;
+    line: number;
+    column: number;
 }
 
 // =============================================================================
@@ -22,7 +106,7 @@ export abstract class Type {
 }
 
 export class SimpleType extends Type {
-    constructor(public readonly name: Token) {
+    constructor(public readonly kind: SimpleTypeKind) {
         super();
     }
 
@@ -42,7 +126,7 @@ export class ArrayType extends Type {
 }
 
 export class StructType extends Type {
-    constructor(public readonly fields: { name: Token; type: Type }[]) {
+    constructor(public readonly fields: { name: string; type: Type }[]) {
         super();
     }
 
@@ -52,7 +136,7 @@ export class StructType extends Type {
 }
 
 export class TableType extends Type {
-    constructor(public readonly columns: { name: Token; type: Type }[]) {
+    constructor(public readonly columns: { name: string; type: Type }[]) {
         super();
     }
 
@@ -86,20 +170,20 @@ export class AnyTableType extends Type {
 // =============================================================================
 
 export interface ExprVisitor<R> {
-    visitAssignExpr(expr: Assign, row?: any, dataContext?: any): R;
-    visitBinaryExpr(expr: Binary, row?: any, dataContext?: any): R;
-    visitCallExpr(expr: Call, row?: any, dataContext?: any): R;
-    visitGroupingExpr(expr: Grouping, row?: any, dataContext?: any): R;
-    visitLiteralExpr(expr: Literal, row?: any, dataContext?: any): R;
-    visitLogicalExpr(expr: Logical, row?: any, dataContext?: any): R;
-    visitUnaryExpr(expr: Unary, row?: any, dataContext?: any): R;
-    visitVariableExpr(expr: Variable, row?: any, dataContext?: any): R;
-    visitGetExpr(expr: Get, row?: any, dataContext?: any): R;
-    visitCaseExpr(expr: CaseExpr, row?: any, dataContext?: any): R;
+    visitAssignExpr(expr: Assign, context?: any): R;
+    visitBinaryExpr(expr: Binary, context?: any): R;
+    visitCallExpr(expr: Call, context?: any): R;
+    visitGroupingExpr(expr: Grouping, context?: any): R;
+    visitLiteralExpr(expr: Literal, context?: any): R;
+    visitLogicalExpr(expr: Logical, context?: any): R;
+    visitUnaryExpr(expr: Unary, context?: any): R;
+    visitVariableExpr(expr: Variable, context?: any): R;
+    visitGetExpr(expr: Get, context?: any): R;
+    visitCaseExpr(expr: CaseExpr, context?: any): R;
 }
 
 export abstract class Expr {
-    abstract accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R;
+    abstract accept<R>(visitor: ExprVisitor<R>, context?: any): R;
 }
 
 export class CaseExpr extends Expr {
@@ -110,46 +194,45 @@ export class CaseExpr extends Expr {
         super();
     }
 
-    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
-        return visitor.visitCaseExpr(this, row, dataContext);
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitCaseExpr(this, context);
     }
 }
 
 export class Assign extends Expr {
-    constructor(public readonly name: Token, public readonly value: Expr) {
+    constructor(public readonly name: string, public readonly value: Expr) {
         super();
     }
 
-    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
-        return visitor.visitAssignExpr(this, row, dataContext);
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitAssignExpr(this, context);
     }
 }
 
 export class Binary extends Expr {
     constructor(
         public readonly left: Expr,
-        public readonly operator: Token,
+        public readonly operator: BinaryOperator,
         public readonly right: Expr
     ) {
         super();
     }
 
-    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
-        return visitor.visitBinaryExpr(this, row, dataContext);
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitBinaryExpr(this, context);
     }
 }
 
 export class Call extends Expr {
     constructor(
         public readonly callee: Expr,
-        public readonly paren: Token,
         public readonly args: Expr[]
     ) {
         super();
     }
 
-    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
-        return visitor.visitCallExpr(this, row, dataContext);
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitCallExpr(this, context);
     }
 }
 
@@ -158,62 +241,65 @@ export class Grouping extends Expr {
         super();
     }
 
-    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
-        return visitor.visitGroupingExpr(this, row, dataContext);
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitGroupingExpr(this, context);
     }
 }
 
 export class Literal extends Expr {
-    constructor(public readonly value: any) {
+    constructor(
+        public readonly kind: LiteralKind,
+        public readonly value: string | number | boolean | null
+    ) {
         super();
     }
 
-    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
-        return visitor.visitLiteralExpr(this, row, dataContext);
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitLiteralExpr(this, context);
     }
 }
 
 export class Logical extends Expr {
     constructor(
         public readonly left: Expr,
-        public readonly operator: Token,
+        public readonly operator: BinaryOperator, // AND, OR are binary operators
         public readonly right: Expr
     ) {
         super();
     }
 
-    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
-        return visitor.visitLogicalExpr(this, row, dataContext);
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitLogicalExpr(this, context);
     }
 }
 
 export class Unary extends Expr {
-    constructor(public readonly operator: Token, public readonly right: Expr) {
+    constructor(public readonly operator: UnaryOperator, public readonly right: Expr) {
         super();
     }
 
-    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
-        return visitor.visitUnaryExpr(this, row, dataContext);
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitUnaryExpr(this, context);
     }
 }
 
 export class Variable extends Expr {
-    constructor(public readonly name: Token) {
+    constructor(public readonly name: string) {
         super();
     }
 
-    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
-        return visitor.visitVariableExpr(this, row, dataContext);
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitVariableExpr(this, context);
     }
 }
 
 export class Get extends Expr {
-    constructor(public readonly object: Expr, public readonly name: Token) {
+    constructor(public readonly object: Expr, public readonly name: string) {
         super();
     }
 
-    accept<R>(visitor: ExprVisitor<R>, row?: any, dataContext?: any): R {
-        return visitor.visitGetExpr(this, row, dataContext);
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitGetExpr(this, context);
     }
 }
 
@@ -224,7 +310,7 @@ export class Get extends Expr {
 
 export interface SelectColumn {
     expression: Expr;
-    alias: Token | null;
+    alias: string | null;
 }
 
 export interface StmtVisitor<R> {
@@ -240,11 +326,9 @@ export interface StmtVisitor<R> {
     visitLimitStmt(stmt: LimitStmt): R;
     visitDistinctStmt(stmt: DistinctStmt): R;
     visitJoinStmt(stmt: JoinStmt): R;
-    visitUnionStmt(stmt: UnionStmt): R;
-    visitExceptStmt(stmt: ExceptStmt): R;
+    visitSetStmt(stmt: SetStmt): R;
     visitAsStmt(stmt: AsStmt): R;
     visitCallStmt(stmt: CallStmt): R;
-    visitSetStmt(stmt: SetStmt): R;
     visitCreateFunctionStmt(stmt: CreateFunctionStmt): R;
     visitCreateTableFunctionStmt(stmt: CreateTableFunctionStmt): R;
 }
@@ -255,7 +339,7 @@ export abstract class Stmt {
 
 export class FunctionParam {
     constructor(
-        public readonly name: Token,
+        public readonly name: string,
         public readonly type: Type,
         public readonly defaultValue: Expr | null = null
     ) { }
@@ -263,14 +347,14 @@ export class FunctionParam {
 
 export class CreateFunctionStmt extends Stmt {
     constructor(
-        public readonly modifiers: Token[], // TEMP, PUBLIC, PRIVATE
-        public readonly name: Token,
+        public readonly modifiers: string[], // TEMP, PUBLIC, PRIVATE
+        public readonly name: string,
         public readonly params: FunctionParam[],
         public readonly returnType: Type | null,
-        public readonly determinism: Token | null, // DETERMINISTIC
-        public readonly language: Token | null, // LANGUAGE js
-        public readonly options: { key: Token; value: Expr }[],
-        public readonly body: Expr | string, // Expr for SQL, string (Literal value) for JS
+        public readonly determinism: string | null, // DETERMINISTIC
+        public readonly language: string | null, // js
+        public readonly options: { key: string; value: Expr }[],
+        public readonly body: Expr | string, // Expr for SQL, string for JS
     ) {
         super();
     }
@@ -282,8 +366,8 @@ export class CreateFunctionStmt extends Stmt {
 
 export class CreateTableFunctionStmt extends Stmt {
     constructor(
-        public readonly modifiers: Token[], // TEMP, PUBLIC, PRIVATE
-        public readonly name: Token,
+        public readonly modifiers: string[], // TEMP, PUBLIC, PRIVATE
+        public readonly name: string,
         public readonly params: FunctionParam[],
         public readonly returnSchema: TableType | null,
         public readonly body: Stmt, // The query body
@@ -307,7 +391,7 @@ export class ExpressionStmt extends Stmt {
 }
 
 export class FromStmt extends Stmt {
-    constructor(public readonly table: Token) {
+    constructor(public readonly table: string) {
         super();
     }
 
@@ -340,7 +424,7 @@ export class WhereStmt extends PipeOperatorStmt {
 
 export interface AggregateColumn {
     expression: Call;
-    alias: Token;
+    alias: string;
 }
 
 export class AggregateStmt extends PipeOperatorStmt {
@@ -367,7 +451,7 @@ export class ExtendStmt extends PipeOperatorStmt {
 }
 
 export class RenameStmt extends PipeOperatorStmt {
-    constructor(public readonly renames: { from: Token; to: Token }[]) {
+    constructor(public readonly renames: { from: string; to: string }[]) {
         super();
     }
 
@@ -377,7 +461,7 @@ export class RenameStmt extends PipeOperatorStmt {
 }
 
 export class OrderByStmt extends PipeOperatorStmt {
-    constructor(public readonly columns: { expression: Expr; direction: Token | null }[]) {
+    constructor(public readonly columns: { expression: Expr; direction: OrderByDirection }[]) {
         super();
     }
 
@@ -407,7 +491,11 @@ export class DistinctStmt extends PipeOperatorStmt {
 }
 
 export class JoinStmt extends PipeOperatorStmt {
-    constructor(public readonly table: Token, public readonly on: Expr) {
+    constructor(
+        public readonly table: string,
+        public readonly on: Expr,
+        public readonly type: JoinType = JoinType.INNER
+    ) {
         super();
     }
 
@@ -416,38 +504,12 @@ export class JoinStmt extends PipeOperatorStmt {
     }
 }
 
-export class UnionStmt extends PipeOperatorStmt {
-    constructor(public readonly table: Token) {
-        super();
-    }
-
-    accept<R>(visitor: StmtVisitor<R>): R {
-        return visitor.visitUnionStmt(this);
-    }
-}
-
-export class ExceptStmt extends PipeOperatorStmt {
-    constructor(public readonly table: Token) {
-        super();
-    }
-
-    accept<R>(visitor: StmtVisitor<R>): R {
-        return visitor.visitExceptStmt(this);
-    }
-}
-
-export class AsStmt extends PipeOperatorStmt {
-    constructor(public readonly name: Token) {
-        super();
-    }
-
-    accept<R>(visitor: StmtVisitor<R>): R {
-        return visitor.visitAsStmt(this);
-    }
-}
-
 export class SetStmt extends PipeOperatorStmt {
-    constructor(public readonly name: Token) {
+    constructor(
+        public readonly operator: SetOperator,
+        public readonly query: QueryStmt,
+        public readonly distinct: boolean = false
+    ) {
         super();
     }
 
@@ -456,8 +518,18 @@ export class SetStmt extends PipeOperatorStmt {
     }
 }
 
+export class AsStmt extends PipeOperatorStmt {
+    constructor(public readonly name: string) {
+        super();
+    }
+
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitAsStmt(this);
+    }
+}
+
 export class CallStmt extends PipeOperatorStmt {
-    constructor(public readonly name: Token, public readonly args: Expr[]) {
+    constructor(public readonly name: string, public readonly args: Expr[]) {
         super();
     }
 
