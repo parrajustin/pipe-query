@@ -98,5 +98,5 @@ grammar {
 		| <ws>? => ( null )
 
 	[__]
-		| <ws> => ( null )z
+		| <ws> => ( null )
 }
