@@ -125,11 +125,21 @@ AS (
 );
 ```
 
+#### 6. Set Operations (Union, Intersect, Except)
+
+Set operations in pipe syntax are applied to the result of the previous pipe. The right-hand side is a parenthesized query expression.
+
+```sql
+FROM table_a
+|> UNION ALL (FROM table_b)
+|> INTERSECT DISTINCT (FROM table_a |> WHERE id > 5)
+```
+
 ## Pseudo-Grammar
 
 ```ebnf
 CreateTVFStatement ::=
-    "CREATE" ("OR" "REPLACE")? ("TEMPORARY" | "TEMP")? "TABLE" "FUNCTION" ("IF" "NOT" "EXISTS")?
+    "CREATE" ("OR" "REPLACE")? ("TEMPORARY" | "TEMP" | "PUBLIC" | "PRIVATE")? "TABLE" "FUNCTION" ("IF" "NOT" "EXISTS")?
     FunctionName "(" FunctionParameters? ")"
     ("RETURNS" "TABLE" "<" ColumnDeclarations ">")?
     "AS" "(" QueryExpression ")"
@@ -158,9 +168,9 @@ PipeOperator ::=
   | "|>" "AGGREGATE" AggregateList ("GROUP" "BY" GroupList)?
   | "|>" "JOIN" Table "ON" Expression
   | "|>" "EXTEND" ExpressionList
-  | "|>" "UNION" ("ALL" | "DISTINCT")? QueryExpression
-  | "|>" "INTERSECT" ("DISTINCT")? QueryExpression
-  | "|>" "EXCEPT" ("DISTINCT")? QueryExpression
+  | "|>" "UNION" ("ALL" | "DISTINCT")? "(" QueryExpression ")"
+  | "|>" "INTERSECT" ("DISTINCT")? "(" QueryExpression ")"
+  | "|>" "EXCEPT" ("DISTINCT")? "(" QueryExpression ")"
   | "|>" "LIMIT" Integer
 
 ```
@@ -197,8 +207,12 @@ grammar {
     | <word> __ <dataType>
 
   # Update FunctionParam to support ANY TYPE, ANY TABLE, and TABLE<...>
+  [FunctionParams]:
+    | FunctionParam
+    | FunctionParams "," __ FunctionParam
+
   [FunctionParam]:
-    | <word> __ <dataType>
+    | <word> __ <dataType> (__ "DEFAULT" __ Expression)?
     | <word> __ "ANY" __ "TYPE"
     | <word> __ "ANY" __ "TABLE"
     | <word> __ "TABLE" __ "<" __ ColumnDeclarations __ ">"
@@ -236,9 +250,9 @@ grammar {
     | "|>" __ "AGGREGATE" __ AggregateList __ ("GROUP" __ "BY" __ GroupList)?
     | "|>" __ "JOIN" __ TableExpression __ "ON" __ Expression
     | "|>" __ "EXTEND" __ ExpressionList
-    | "|>" __ "UNION" __ ("ALL" | "DISTINCT")? __ QueryExpression
-    | "|>" __ "INTERSECT" __ ("DISTINCT")? __ QueryExpression
-    | "|>" __ "EXCEPT" __ ("DISTINCT")? __ QueryExpression
+    | "|>" __ "UNION" __ ("ALL" | "DISTINCT")? __ "(" __ QueryExpression __ ")"
+    | "|>" __ "INTERSECT" __ ("DISTINCT")? __ "(" __ QueryExpression __ ")"
+    | "|>" __ "EXCEPT" __ ("DISTINCT")? __ "(" __ QueryExpression __ ")"
     | "|>" __ "LIMIT" __ <int_lit>
 
   [SelectList]:
@@ -268,13 +282,131 @@ grammar {
   # Expressions & Window Functions
   # -----------------------------------------------------------------
 
-  # Extending standard FunctionCall to support OVER clause
-  [FunctionCall]:
-    | <word> "(" __ ArgumentList? __ ")" (__ OverClause)?
+  # Top-level expression rule (Lowest precedence)
+  [Expression]:
+    | OrExpression
 
-  [ArgumentList]:
-    | Expression
-    | ArgumentList "," __ Expression
+  # 12. Logical OR
+  [OrExpression]:
+    | AndExpression
+    | OrExpression "OR" __ AndExpression
+
+  # 11. Logical AND
+  [AndExpression]:
+    | NotExpression
+    | AndExpression "AND" __ NotExpression
+
+  # 10. Logical NOT
+  [NotExpression]:
+    | "NOT" __ NotExpression
+    | ComparisonExpression
+
+  # 9. Comparisons
+  [ComparisonExpression]:
+    | BitwiseOrExpression
+    | BitwiseOrExpression __ ComparisonOp __ BitwiseOrExpression
+    | BitwiseOrExpression __ "IS" __ ("NOT" __)? "NULL"
+    | BitwiseOrExpression __ "IS" __ ("NOT" __)? "TRUE"
+    | BitwiseOrExpression __ "IS" __ ("NOT" __)? "FALSE"
+    | BitwiseOrExpression __ ("NOT" __)? "IN" __ "(" __ ExpressionList __ ")"
+    | BitwiseOrExpression __ ("NOT" __)? "LIKE" __ BitwiseOrExpression
+    | BitwiseOrExpression __ ("NOT" __)? "BETWEEN" __ BitwiseOrExpression __ "AND" __ BitwiseOrExpression
+
+  [ComparisonOp]:
+    | "=" | "!=" | "<>" | "<" | "<=" | ">" | ">="
+
+  # 8. Bitwise OR (|)
+  [BitwiseOrExpression]:
+    | BitwiseXorExpression
+    | BitwiseOrExpression __ "|" __ BitwiseXorExpression
+
+  # 7. Bitwise XOR (^)
+  [BitwiseXorExpression]:
+    | BitwiseAndExpression
+    | BitwiseXorExpression __ "^" __ BitwiseAndExpression
+
+  # 6. Bitwise AND (&)
+  [BitwiseAndExpression]:
+    | BitwiseShiftExpression
+    | BitwiseAndExpression __ "&" __ BitwiseShiftExpression
+
+  # 5. Bitwise Shift (<<, >>)
+  [BitwiseShiftExpression]:
+    | AdditiveExpression
+    | BitwiseShiftExpression __ "<<" __ AdditiveExpression
+    | BitwiseShiftExpression __ ">>" __ AdditiveExpression
+
+  # 4. Additive (+, -)
+  [AdditiveExpression]:
+    | MultiplicativeExpression
+    | AdditiveExpression __ "+" __ MultiplicativeExpression
+    | AdditiveExpression __ "-" __ MultiplicativeExpression
+
+  # 3. Multiplicative (*, /, ||)
+  [MultiplicativeExpression]:
+    | UnaryExpression
+    | MultiplicativeExpression __ "*" __ UnaryExpression
+    | MultiplicativeExpression __ "/" __ UnaryExpression
+    | MultiplicativeExpression __ "||" __ UnaryExpression
+
+  # 2. Unary (+, -, ~)
+  [UnaryExpression]:
+    | "+" __ UnaryExpression
+    | "-" __ UnaryExpression
+    | "~" __ UnaryExpression
+    | PostfixExpression
+
+  # 1. Postfix (Access) - [], ., OFFSET, ORDINAL
+  [PostfixExpression]:
+    | PrimaryExpression
+    | PostfixExpression "." <word>
+    | PostfixExpression "[" __ Expression __ "]"
+    | PostfixExpression "[" __ "OFFSET" "(" __ Expression __ ")" __ "]"
+    | PostfixExpression "[" __ "ORDINAL" "(" __ Expression __ ")" __ "]"
+
+  # 0. Primary Expressions (Atoms)
+  [PrimaryExpression]:
+    | Literal
+    | Identifier
+    | FunctionCall
+    | CaseExpression
+    | IfExpression
+    | CoalesceExpression
+    | NullIfExpression
+    | ArrayConstructor
+    | StructConstructor
+    | CastExpression
+    | ExtractExpression
+    | "(" __ Expression __ ")"
+    | "(" __ QueryExpression __ ")" # Scalar Subquery
+
+  # Literals
+  [Literal]:
+    | <int_lit>
+    | <float_lit>
+    | <string_lit>
+    | <bool_lit>
+    | <null_lit>
+    | TypedLiteral
+
+  [TypedLiteral]:
+    | "DATE" __ <string_lit>
+    | "TIME" __ <string_lit>
+    | "DATETIME" __ <string_lit>
+    | "TIMESTAMP" __ <string_lit>
+    | "INTERVAL" __ <string_lit> __ <word>
+    | "JSON" __ <string_lit>
+    | "NUMERIC" __ <string_lit>
+    | "BIGNUMERIC" __ <string_lit>
+
+  # Identifiers (Columns, Variables)
+  [Identifier]:
+    | <word>
+
+  # Function Calls (Merged with TVF OverClause support)
+  [FunctionCall]:
+    | <word> "(" __ (ExpressionList)? __ ")" (__ OverClause)?
+    | "COUNT" "(" __ "*" __ ")" (__ OverClause)?
 
   [OverClause]:
     | "OVER" __ "(" __ WindowSpecification __ ")"
@@ -309,48 +441,87 @@ grammar {
     | Expression __ "PRECEDING"
     | Expression __ "FOLLOWING"
 
-  # Placeholder for base Expression if not imported
-  [Expression]:
-    | <word>
-    | <int_lit>
-    | <string_lit>
-    | FunctionCall
-    | Expression __ <operator> __ Expression
-    | "(" __ Expression __ ")"
+  # CASE Expression
+  [CaseExpression]:
+    | "CASE" __ (Expression __)? CaseWhenClauses __ ("ELSE" __ Expression __)? "END"
+
+  [CaseWhenClauses]:
+    | "WHEN" __ Expression __ "THEN" __ Expression
+    | CaseWhenClauses __ "WHEN" __ Expression __ "THEN" __ Expression
+
+  # IF Expression
+  [IfExpression]:
+    | "IF" "(" __ Expression "," __ Expression "," __ Expression __ ")"
+
+  # COALESCE Expression
+  [CoalesceExpression]:
+    | "COALESCE" "(" __ ExpressionList __ ")"
+
+  # NULLIF Expression
+  [NullIfExpression]:
+    | "NULLIF" "(" __ Expression "," __ Expression __ ")"
+
+  # CAST Expression
+  [CastExpression]:
+    | "CAST" "(" __ Expression __ "AS" __ <dataType> __ ")"
+
+  # EXTRACT Expression
+  [ExtractExpression]:
+    | "EXTRACT" "(" __ <word> __ "FROM" __ Expression __ ")"
+
+  # Array Constructor
+  [ArrayConstructor]:
+    | "[" __ (ExpressionList)? __ "]"
+    | "ARRAY" "<" __ <dataType> __ ">" "[" __ (ExpressionList)? __ "]"
+
+  # Struct Constructor
+  [StructConstructor]:
+    | "STRUCT" "(" __ (ExpressionList)? __ ")"
+    | "STRUCT" "<" __ ColumnDeclarations __ ">" "(" __ (ExpressionList)? __ ")"
 
 }
 ```
 
-## Scratch Space (Research Notes)
+## Reflection
 
-### Window Functions
+### Test Data Coverage
 
-- Syntax: `function_name(...) OVER window_name_or_spec`
-- Window Spec: `PARTITION BY ... ORDER BY ... ROWS/RANGE ...`
-- Usage in TVF: Can be used freely in the `SELECT` list of the TVF body.
-- Parameterization: Window size (e.g., `ROWS BETWEEN N PRECEDING`) can be parameterized if `N` is an integer argument to the TVF.
+The grammar has been updated to support the syntax found in the `src/parser/testdata/*.sql` files.
 
-### Aggregate Functions
+1.  **`tvf.sql` & `tvf_basic.sql`**:
 
-- Syntax: `func(...) [HAVING MIN/MAX ...] [ORDER BY ...] [LIMIT ...]`
-- Usage in TVF: Can be used with `GROUP BY` in the TVF body.
-- `HAVING MAX/MIN`: Special clause to restrict aggregation to rows with max/min value in a column.
+    - **Creation**: `PrivateTableFunction` and `PublicTableFunction` rules cover `CREATE TEMP/PUBLIC/PRIVATE TABLE FUNCTION`.
+    - **Parameters**: `FunctionParams` supports scalar types (`<word> __ <dataType>`), `ANY TABLE`, `ANY TYPE`, and value tables (`TABLE<INT64>`).
+    - **Body**: `QueryExpression` supports `FROM ... |> SELECT ...`.
 
-### Table Parameters
+2.  **`tvf_params.sql`**:
 
-- `TABLE<col type, ...>`: Explicit schema.
-- `ANY TABLE`: Polymorphic.
-- Value Tables: `TABLE<type>` (single unnamed column).
-- Parameter Names: Should not collide with column names of input tables to avoid ambiguity.
+    - **Table Parameters**: `FunctionParam` rule includes `TABLE<...>` with `ColumnDeclarations`.
+    - **Polymorphism**: `ANY TABLE` and `ANY TYPE` are explicitly handled.
 
-### Table Function Calls
+3.  **`tvf_complex.sql`**:
 
-- Called in `FROM` clause: `FROM MyTVF(arg1, arg2)`
-- Can be joined: `FROM Table1 JOIN MyTVF(Table1.col) ON ...` (Correlated join if supported).
+    - **CTEs**: `WithClause` and `CteList` support `WITH ... AS (...)`.
+    - **Window Functions**: `FunctionCall` now includes `OverClause`, allowing `AVG(...) OVER (...)`. `WindowSpecification` supports `PARTITION BY`, `ORDER BY`, and `ROWS/RANGE` frames.
+    - **Aggregate**: `PipeOperator` includes `AGGREGATE ... GROUP BY`.
 
-### Links
+4.  **`tvf_set_ops.sql`**:
 
-- [ZetaSQL Table Functions](https://github.com/google/zetasql/blob/master/docs/table-functions.md)
-- [BigQuery Table Functions](https://cloud.google.com/bigquery/docs/reference/standard-sql/table-functions)
-- [ZetaSQL Window Functions](https://github.com/google/zetasql/blob/master/docs/window-function-calls.md)
-- [ZetaSQL Aggregate Functions](https://github.com/google/zetasql/blob/master/docs/aggregate-function-calls.md)
+    - **Set Operations**: `PipeOperator` now includes `UNION`, `INTERSECT`, `EXCEPT` followed by a parenthesized `QueryExpression` (`"(" __ QueryExpression __ ")"`). This matches the syntax `|> UNION ALL (FROM table_b)`.
+
+5.  **`tvf_edge_cases.sql`**:
+    - **No Parameters**: `FunctionParams?` is optional in the function definition.
+    - **Defaults**: `FunctionParam` supports `DEFAULT Expression`.
+    - **Nested CTEs**: The grammar allows `QueryExpression` inside `Cte`, which can contain another `WithClause` if `QueryExpression` supports it.
+    - **Subqueries**: `PrimaryExpression` includes `"(" __ QueryExpression __ ")"` to support scalar subqueries like `(SELECT COUNT(*) ...)`.
+
+### Compilation Logic
+
+- **Scalar Subqueries**: Added `| "(" __ QueryExpression __ ")"` to `PrimaryExpression`. This allows `SELECT (SELECT 1)` or `WHERE x > (FROM t |> AGGREGATE MAX(y))`.
+- **Expression Integration**: The full expression grammar from `docs/expressions.md` is now embedded, ensuring operator precedence is respected (e.g. `*` before `+`).
+- **Pipe Operators**: The pipe operators are defined sequentially. The parser will consume them in order.
+
+### Missing / Future Work
+
+- **Recursive CTEs**: The current grammar does not have special syntax for `RECURSIVE`, but standard `WITH` can handle it if the analyzer supports it.
+- **Quoted Identifiers**: The grammar uses `<word>` for identifiers. If we need to support `` `identifier` ``, the lexer needs to handle it or we need a `QuotedIdentifier` rule.
