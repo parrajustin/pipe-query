@@ -108,7 +108,7 @@ grammar {
     | Identifier "=" Expression
 
   [JsFunctionBodyString]:
-    | StringLiteral
+    | r:{r"""((?!""").)*"""}
 
   [SqlFunctionBody]:
     | Expression
