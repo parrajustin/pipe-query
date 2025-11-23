@@ -205,10 +205,119 @@ grammar {
     # Value table argument
     | <word> __ "TABLE" __ "<" __ <dataType> __ ">"
 
-  # Placeholder for QueryExpression. In a real implementation, this would link to the full SELECT grammar.
-  # It must support WITH clauses, subqueries, etc.
+  # -----------------------------------------------------------------
+  # Query Expression (Pipe Syntax)
+  # -----------------------------------------------------------------
+
   [QueryExpression]:
-    | "SELECT" __ "1" # Placeholder
+    | WithClause? FromClause PipeOperator*
+
+  [WithClause]:
+    | "WITH" __ CteList __
+
+  [CteList]:
+    | Cte
+    | CteList "," __ Cte
+
+  [Cte]:
+    | <word> __ "AS" __ "(" __ QueryExpression __ ")"
+
+  [FromClause]:
+    | "FROM" __ TableExpression
+
+  [TableExpression]:
+    | <word> # Table name
+    | FunctionCall # TVF call
+    | "(" __ QueryExpression __ ")" # Subquery
+
+  [PipeOperator]:
+    | "|>" __ "SELECT" __ SelectList
+    | "|>" __ "WHERE" __ Expression
+    | "|>" __ "AGGREGATE" __ AggregateList __ ("GROUP" __ "BY" __ GroupList)?
+    | "|>" __ "JOIN" __ TableExpression __ "ON" __ Expression
+    | "|>" __ "EXTEND" __ ExpressionList
+    | "|>" __ "UNION" __ ("ALL" | "DISTINCT")? __ QueryExpression
+    | "|>" __ "INTERSECT" __ ("DISTINCT")? __ QueryExpression
+    | "|>" __ "EXCEPT" __ ("DISTINCT")? __ QueryExpression
+    | "|>" __ "LIMIT" __ <int_lit>
+
+  [SelectList]:
+    | SelectItem
+    | SelectList "," __ SelectItem
+
+  [SelectItem]:
+    | Expression ("AS" __ <word>)?
+    | "*"
+
+  [AggregateList]:
+    | AggregateItem
+    | AggregateList "," __ AggregateItem
+
+  [AggregateItem]:
+    | FunctionCall ("AS" __ <word>)?
+
+  [GroupList]:
+    | Expression
+    | GroupList "," __ Expression
+
+  [ExpressionList]:
+    | Expression
+    | ExpressionList "," __ Expression
+
+  # -----------------------------------------------------------------
+  # Expressions & Window Functions
+  # -----------------------------------------------------------------
+
+  # Extending standard FunctionCall to support OVER clause
+  [FunctionCall]:
+    | <word> "(" __ ArgumentList? __ ")" (__ OverClause)?
+
+  [ArgumentList]:
+    | Expression
+    | ArgumentList "," __ Expression
+
+  [OverClause]:
+    | "OVER" __ "(" __ WindowSpecification __ ")"
+
+  [WindowSpecification]:
+    | ("PARTITION" __ "BY" __ PartitionList)? (__ OrderByClause)? (__ WindowFrameClause)?
+
+  [PartitionList]:
+    | Expression
+    | PartitionList "," __ Expression
+
+  [OrderByClause]:
+    | "ORDER" __ "BY" __ OrderItemList
+
+  [OrderItemList]:
+    | Expression (__ ("ASC" | "DESC"))?
+    | OrderItemList "," __ Expression (__ ("ASC" | "DESC"))?
+
+  [WindowFrameClause]:
+    | ("ROWS" | "RANGE") __ FrameExtent
+
+  [FrameExtent]:
+    | "UNBOUNDED" __ "PRECEDING"
+    | "CURRENT" __ "ROW"
+    | Expression __ "PRECEDING"
+    | "BETWEEN" __ FrameBound __ "AND" __ FrameBound
+
+  [FrameBound]:
+    | "UNBOUNDED" __ "PRECEDING"
+    | "UNBOUNDED" __ "FOLLOWING"
+    | "CURRENT" __ "ROW"
+    | Expression __ "PRECEDING"
+    | Expression __ "FOLLOWING"
+
+  # Placeholder for base Expression if not imported
+  [Expression]:
+    | <word>
+    | <int_lit>
+    | <string_lit>
+    | FunctionCall
+    | Expression __ <operator> __ Expression
+    | "(" __ Expression __ ")"
+
 }
 ```
 
