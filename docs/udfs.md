@@ -2,29 +2,31 @@
 
 This document provides documentation for Google SQL User Defined Functions (UDFs), including supported data types, expression information, and a formal grammar definition using the Grammar-Well format.
 
+For detailed information on scalar expressions used within UDFs, please refer to [Scalar Expressions](expressions.md).
+
 ## 1. Data Types
 
 Google SQL supports a variety of data types for UDF parameters and return values.
 
-| Type Name | Description |
-| :--- | :--- |
-| `ARRAY<T>` | An ordered list of zero or more elements of non-array values. |
-| `BOOL` (alias: `BOOLEAN`) | Boolean values (`TRUE`, `FALSE`, `NULL`). |
-| `BYTES` | Variable-length binary data. Can be parameterized as `BYTES(L)`. |
-| `DATE` | A logical calendar date (year, month, day). |
-| `DATETIME` | A year, month, day, hour, minute, second, and subsecond. |
-| `GEOGRAPHY` | A collection of points, linestrings, and polygons on the Earth's surface. |
-| `INTERVAL` | A duration of time (years, months, days, hours, minutes, seconds). |
-| `JSON` | JSON data. |
-| `INT64` (aliases: `INT`, `SMALLINT`, `INTEGER`, `BIGINT`, `TINYINT`, `BYTEINT`) | 64-bit signed integer. |
-| `NUMERIC` (alias: `DECIMAL`) | Fixed precision and scale decimal. Precision: 38, Scale: 9. Can be parameterized `NUMERIC(P, S)`. |
-| `BIGNUMERIC` (alias: `BIGDECIMAL`) | Fixed precision and scale decimal. Precision: 76.76, Scale: 38. Can be parameterized `BIGNUMERIC(P, S)`. |
-| `FLOAT64` | Double precision floating point. |
-| `RANGE<T>` | Contiguous range between two dates, datetimes, or timestamps. |
-| `STRING` | Variable-length Unicode character data. Can be parameterized as `STRING(L)`. |
-| `STRUCT` | Container of ordered fields. |
-| `TIME` | A time of day (hour, minute, second, subsecond). |
-| `TIMESTAMP` | An absolute point in time. |
+| Type Name                                                                       | Description                                                                                              |
+| :------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------- |
+| `ARRAY<T>`                                                                      | An ordered list of zero or more elements of non-array values.                                            |
+| `BOOL` (alias: `BOOLEAN`)                                                       | Boolean values (`TRUE`, `FALSE`, `NULL`).                                                                |
+| `BYTES`                                                                         | Variable-length binary data. Can be parameterized as `BYTES(L)`.                                         |
+| `DATE`                                                                          | A logical calendar date (year, month, day).                                                              |
+| `DATETIME`                                                                      | A year, month, day, hour, minute, second, and subsecond.                                                 |
+| `GEOGRAPHY`                                                                     | A collection of points, linestrings, and polygons on the Earth's surface.                                |
+| `INTERVAL`                                                                      | A duration of time (years, months, days, hours, minutes, seconds).                                       |
+| `JSON`                                                                          | JSON data.                                                                                               |
+| `INT64` (aliases: `INT`, `SMALLINT`, `INTEGER`, `BIGINT`, `TINYINT`, `BYTEINT`) | 64-bit signed integer.                                                                                   |
+| `NUMERIC` (alias: `DECIMAL`)                                                    | Fixed precision and scale decimal. Precision: 38, Scale: 9. Can be parameterized `NUMERIC(P, S)`.        |
+| `BIGNUMERIC` (alias: `BIGDECIMAL`)                                              | Fixed precision and scale decimal. Precision: 76.76, Scale: 38. Can be parameterized `BIGNUMERIC(P, S)`. |
+| `FLOAT64`                                                                       | Double precision floating point.                                                                         |
+| `RANGE<T>`                                                                      | Contiguous range between two dates, datetimes, or timestamps.                                            |
+| `STRING`                                                                        | Variable-length Unicode character data. Can be parameterized as `STRING(L)`.                             |
+| `STRUCT`                                                                        | Container of ordered fields.                                                                             |
+| `TIME`                                                                          | A time of day (hour, minute, second, subsecond).                                                         |
+| `TIMESTAMP`                                                                     | An absolute point in time.                                                                               |
 
 ## 2. User Defined Functions (UDFs)
 
@@ -136,49 +138,10 @@ grammar {
   [StructField]:
     | (Identifier)? DataType
 
-  # Simplified Expression and Literal definitions for completeness of the mock grammar
+  # Expression Grammar
+  # The Expression rule and its dependencies are defined in docs/expressions.md
+  # We import/reference them here conceptually.
   [Expression]:
-    | Literal
-    | Identifier
-    | Expression Operator Expression
-    | "(" Expression ")"
-    | FunctionCall
-
-  [FunctionCall]:
-    | FunctionName "(" (Expression ("," Expression)*)? ")"
-
-  [Literal]:
-    | StringLiteral
-    | IntegerLiteral
-    | FloatLiteral
-    | BooleanLiteral
-    | NullLiteral
-
-  [StringLiteral]:
-    | r:{'([^'\\]|\\.)*'}
-    | r:{"([^"\\]|\\.)*"}
-    | r:{r'([^'\\]|\\.)*'}
-    | r:{r"([^"\\]|\\.)*"}
-    | r:{'''((?!''').)*'''}
-    | r:{"""((?!""").)*"""}
-
-  [IntegerLiteral]:
-    | r:{[0-9]+}
-
-  [FloatLiteral]:
-    | r:{[0-9]*\.[0-9]+([eE][+-]?[0-9]+)?}
-
-  [BooleanLiteral]:
-    | "TRUE" | "FALSE"
-
-  [NullLiteral]:
-    | "NULL"
-
-  [Identifier]:
-    | r:{[a-zA-Z_][a-zA-Z0-9_]*}
-    | r:{`[^`]+`}
-
-  [Operator]:
-    | "+" | "-" | "*" | "/" | "=" | "<" | ">" | "<=" | ">=" | "!=" | "<>"
+    | <import: expressions.md:Expression>
 }
 ```
