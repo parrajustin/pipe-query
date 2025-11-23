@@ -175,13 +175,13 @@ grammar {
     | PublicTableFunction
 
   [PrivateTableFunction]:
-    | "CREATE" __ ("OR" __ "REPLACE" __)? ("TEMPORARY" | "TEMP") __ "TABLE" __ "FUNCTION" __ ("IF" __ "NOT" __ "EXISTS" __)?
+    | "CREATE" __ ("TEMPORARY" | "TEMP" | "PRIVATE") __ "TABLE" __ "FUNCTION" __
       <word> "(" FunctionParams? ")" __
       (ReturnsTableClause __)?
       "AS" __ "(" __ QueryExpression __ ")" __ ";"
 
   [PublicTableFunction]:
-    | "CREATE" __ ("OR" __ "REPLACE" __)? "TABLE" __ "FUNCTION" __ ("IF" __ "NOT" __ "EXISTS" __)?
+    | "CREATE" __ "PUBLIC" __ "TABLE" __ "FUNCTION" __
       <word> "(" FunctionParams? ")" __
       (ReturnsTableClause __)?
       "AS" __ "(" __ QueryExpression __ ")" __ ";"
