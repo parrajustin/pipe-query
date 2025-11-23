@@ -4,11 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
-    "compile:grammar": "nearleyc src/parser/grammar.ne -o src/parser/grammar.ts",
-    "compile:grammar:test": "nearleyc src/parser/grammar.ne -o dist/grammar.js",
-    "nearley:railroad": "nearley-railroad src/parser/grammar.ne -o grammar.html",
-    "nearley:unparse": "nearley-unparse grammar.js"
+    "test": "npm run compile:grammer && jest",
+    "compile:grammer": "ts-node scripts/compile-grammar.ts"
   },
   "repository": {
     "type": "git",

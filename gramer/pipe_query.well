@@ -1,0 +1,102 @@
+import * from "lexer";
+import * from "grammar";
+
+lexer {
+	start: root
+
+	[root]
+		- import keywords
+		- when "ARRAY" tag "dataType" highlight "array"
+		- when "BIGNUMERIC" tag "dataType" highlight "bignumeric"
+		- when "BOOL" tag "dataType" highlight "bool"
+		- when "BYTES" tag "dataType" highlight "bytes"
+		- when "DATE" tag "dataType" highlight "date"
+		- when "DATETIME" tag "dataType" highlight "datetime"
+		- when "FLOAT64" tag "dataType" highlight "float64"
+		- when "GEOGRAPHY" tag "dataType" highlight "geography"
+		- when "INT64" tag "dataType" highlight "int64"
+		- when "INTERVAL" tag "dataType" highlight "interval"
+		- when "JSON" tag "dataType" highlight "json"
+		- when "NUMERIC" tag "dataType" highlight "numeric"
+		- when "RANGE" tag "dataType" highlight "range"
+		- when "STRING" tag "dataType" highlight "string"
+		- when "STRUCT" tag "dataType" highlight "struct"
+		- when "TIME" tag "dataType" highlight "time"
+		- when "TIMESTAMP" tag "dataType" highlight "timestamp"
+		- when r:{\d+} tag "digits" highlight "number"
+		- when r:{"(?:\\["bfnrt\/\\]|\\u[a-fA-F0-9]{4}|[^"\\])*"} tag "string"
+		- when r:{\/(?:[^\/\\\r\n]|\\.)+\/[gmiy]*} tag "regex" highlight "regexp"
+		- when r:{[_a-zA-Z][_a-zA-Z\d]*} tag "word"
+		- when "==" tag "l_eqeq" highlight "keyword"
+		- when ">=" tag "l_gteq" highlight "keyword"
+		- when "<=" tag "l_lteq" highlight "keyword"
+		- when "=" tag "l_eq"
+		- when ">" tag "l_gt" highlight "keyword"
+		- when "<" tag "l_lt" highlight "keyword"
+		- when "+" tag "l_add" highlight "keyword"
+		- when "-" tag "l_sub" highlight "keyword"
+		- when "/" tag "l_div" highlight "keyword"
+		- when "%" tag "l_mod" highlight "keyword"
+		- when "*" tag "l_mul" highlight "keyword"
+		- when "^" tag "l_exp" highlight "keyword"
+		- when ";" tag "l_semi" highlight "keyword"
+		- when ":" tag "l_col" highlight "keyword"
+		- when "!" tag "l_exc" highlight "keyword"
+		- when "." tag "l_dot"
+		- when "," tag "l_comma" highlight "delimiter"
+		- when "$" tag "l_m" highlight "keyword"
+		- when "(" tag "l_lparen" highlight "delimiter"
+		- when ")" tag "l_rparen" highlight "delimiter"
+		- when "{" tag "l_lcurly" highlight "delimiter"
+		- when "}" tag "l_rcurly" highlight "delimiter"
+		- when "[" tag "l_lbrack" highlight "delimiter"
+		- when "]" tag "l_rbrack" highlight "delimiter"
+		- when r:{\s+} tag "ws"
+
+	[keywords]
+		- when r:{var(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{function(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{true(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{false(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{null(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{and(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{or(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{on(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{if(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{in(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{each(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{else(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{for(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{not(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{while(?![a-zA-Z])} tag "keyword" highlight "keyword"
+
+}
+
+
+
+grammar {
+    start: QueryRoot
+
+    [QueryRoot]
+        | PrivateScalarFunction
+		| PublicScalarFunction
+
+	[PrivateScalarFunction]
+        | "CREATE" __ ("TEMP" | "PRIVATE") __ "FUNCTION" __ <word> "(" FunctionParams? ")" __ "RETURNS" __ <dataType> __  "AS" _ "(" ")" ";"
+
+	[PublicScalarFunction]
+        | "CREATE" __ "PUBLIC" __ "FUNCTION" __ <word> "(" FunctionParams? ")" __ "RETURNS" __ <dataType> __  "AS" _ "(" ")" ";"
+
+	[FunctionParams]
+		| FunctionParam
+		| FunctionParams "," __ FunctionParam
+	
+	[FunctionParam]
+		| <word> __ <dataType>
+
+	[_]
+		| <ws>? => ( null )
+
+	[__]
+		| <ws> => ( null )z
+}
