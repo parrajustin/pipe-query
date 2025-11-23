@@ -5,6 +5,9 @@ lexer {
 	start: root
 
 	[root]
+		- when r:{--[^\n]*} tag "comment" highlight "comment"
+		- when r:{\/\*[\s\S]*?\*\/} tag "comment" highlight "comment"
+		- when r:{\n} tag "newline"
 		- import keywords
 		- when "ARRAY" tag "dataType" highlight "array"
 		- when "BIGNUMERIC" tag "dataType" highlight "bignumeric"
@@ -51,7 +54,7 @@ lexer {
 		- when "}" tag "l_rcurly" highlight "delimiter"
 		- when "[" tag "l_lbrack" highlight "delimiter"
 		- when "]" tag "l_rbrack" highlight "delimiter"
-		- when r:{\s+} tag "ws"
+		- when r:{[ \t\r]+} tag "ws"
 
 	[keywords]
 		- when r:{var(?![a-zA-Z])} tag "keyword" highlight "keyword"
@@ -69,17 +72,24 @@ lexer {
 		- when r:{for(?![a-zA-Z])} tag "keyword" highlight "keyword"
 		- when r:{not(?![a-zA-Z])} tag "keyword" highlight "keyword"
 		- when r:{while(?![a-zA-Z])} tag "keyword" highlight "keyword"
-
 }
-
-
 
 grammar {
     start: QueryRoot
 
     [QueryRoot]
-        | PrivateScalarFunction
-		| PublicScalarFunction
+        | QueryRoot? Sep PrivateScalarFunction
+		| QueryRoot? Sep PublicScalarFunction
+        | Sep
+
+    [Sep]
+        | ( __ | <comment> | NL_ )* => ( null )
+
+    [NL]
+        | <newline>? => ( null )
+
+    [NL_]
+        | <newline> => ( null )
 
 	[PrivateScalarFunction]
         | "CREATE" __ ("TEMP" | "PRIVATE") __ "FUNCTION" __ <word> "(" FunctionParams? ")" __ "RETURNS" __ <dataType> __  "AS" _ "(" ")" ";"

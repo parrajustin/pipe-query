@@ -16,6 +16,16 @@ class grammar {
                     { name: "FunctionParams", symbols: [ "FunctionParam" ] },
                     { name: "FunctionParams", symbols: [ "FunctionParams", { literal: "," }, "__", "FunctionParam" ] }
                 ],
+                NL: [
+                    { name: "NL", postprocess: ({data}) => { return (null); }, symbols: [ "NL.RPT01x1" ] }
+                ],
+                "NL.RPT01x1": [
+                    { name: "NL.RPT01x1", postprocess: ({data}) => data[0], symbols: [ { token: "newline" } ] },
+                    { name: "NL.RPT01x1", postprocess: () => null, symbols: [ ] }
+                ],
+                NL_: [
+                    { name: "NL_", postprocess: ({data}) => { return (null); }, symbols: [ { token: "newline" } ] }
+                ],
                 PrivateScalarFunction: [
                     { name: "PrivateScalarFunction", symbols: [ { literal: "CREATE" }, "__", "PrivateScalarFunction.SUBx1", "__", { literal: "FUNCTION" }, "__", { token: "word" }, { literal: "(" }, "PrivateScalarFunction.RPT01x1", { literal: ")" }, "__", { literal: "RETURNS" }, "__", { token: "dataType" }, "__", { literal: "AS" }, "_", { literal: "(" }, { literal: ")" }, { literal: ";" } ] }
                 ],
@@ -35,8 +45,29 @@ class grammar {
                     { name: "PublicScalarFunction.RPT01x1", postprocess: () => null, symbols: [ ] }
                 ],
                 QueryRoot: [
-                    { name: "QueryRoot", symbols: [ "PrivateScalarFunction" ] },
-                    { name: "QueryRoot", symbols: [ "PublicScalarFunction" ] }
+                    { name: "QueryRoot", symbols: [ "QueryRoot.RPT01x1", "Sep", "PrivateScalarFunction" ] },
+                    { name: "QueryRoot", symbols: [ "QueryRoot.RPT01x2", "Sep", "PublicScalarFunction" ] },
+                    { name: "QueryRoot", symbols: [ "Sep" ] }
+                ],
+                "QueryRoot.RPT01x1": [
+                    { name: "QueryRoot.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "QueryRoot" ] },
+                    { name: "QueryRoot.RPT01x1", postprocess: () => null, symbols: [ ] }
+                ],
+                "QueryRoot.RPT01x2": [
+                    { name: "QueryRoot.RPT01x2", postprocess: ({data}) => data[0], symbols: [ "QueryRoot" ] },
+                    { name: "QueryRoot.RPT01x2", postprocess: () => null, symbols: [ ] }
+                ],
+                Sep: [
+                    { name: "Sep", postprocess: ({data}) => { return (null); }, symbols: [ "Sep.RPT0Nx1" ] }
+                ],
+                "Sep.RPT0Nx1": [
+                    { name: "Sep.RPT0Nx1", symbols: [ ] },
+                    { name: "Sep.RPT0Nx1", postprocess: ({data}) => data[0].concat([data[1]]), symbols: [ "Sep.RPT0Nx1", "Sep.RPT0Nx1.SUBx1" ] }
+                ],
+                "Sep.RPT0Nx1.SUBx1": [
+                    { name: "Sep.RPT0Nx1.SUBx1", symbols: [ "__" ] },
+                    { name: "Sep.RPT0Nx1.SUBx1", symbols: [ { token: "comment" } ] },
+                    { name: "Sep.RPT0Nx1.SUBx1", symbols: [ "NL_" ] }
                 ],
                 _: [
                     { name: "_", postprocess: ({data}) => { return (null); }, symbols: [ "_.RPT01x1" ] }
@@ -78,8 +109,11 @@ class grammar {
                     ]
                 },
                 root: {
-                    regex: /(?:(?:(var(?![a-zA-Z])))|(?:(function(?![a-zA-Z])))|(?:(true(?![a-zA-Z])))|(?:(false(?![a-zA-Z])))|(?:(null(?![a-zA-Z])))|(?:(and(?![a-zA-Z])))|(?:(or(?![a-zA-Z])))|(?:(on(?![a-zA-Z])))|(?:(if(?![a-zA-Z])))|(?:(in(?![a-zA-Z])))|(?:(each(?![a-zA-Z])))|(?:(else(?![a-zA-Z])))|(?:(for(?![a-zA-Z])))|(?:(not(?![a-zA-Z])))|(?:(while(?![a-zA-Z])))|(?:((?:ARRAY)))|(?:((?:BIGNUMERIC)))|(?:((?:BOOL)))|(?:((?:BYTES)))|(?:((?:DATE)))|(?:((?:DATETIME)))|(?:((?:FLOAT64)))|(?:((?:GEOGRAPHY)))|(?:((?:INT64)))|(?:((?:INTERVAL)))|(?:((?:JSON)))|(?:((?:NUMERIC)))|(?:((?:RANGE)))|(?:((?:STRING)))|(?:((?:STRUCT)))|(?:((?:TIME)))|(?:((?:TIMESTAMP)))|(?:(\d+))|(?:("(?:\\["bfnrt\/\\]|\\u[a-fA-F0-9]{4}|[^"\\])*"))|(?:(\/(?:[^\/\\\r\n]|\\.)+\/[gmiy]*))|(?:([_a-zA-Z][_a-zA-Z\d]*))|(?:((?:==)))|(?:((?:>=)))|(?:((?:<=)))|(?:((?:=)))|(?:((?:>)))|(?:((?:<)))|(?:((?:\+)))|(?:((?:\-)))|(?:((?:\/)))|(?:((?:%)))|(?:((?:\*)))|(?:((?:\^)))|(?:((?:;)))|(?:((?::)))|(?:((?:!)))|(?:((?:\.)))|(?:((?:,)))|(?:((?:\$)))|(?:((?:\()))|(?:((?:\))))|(?:((?:\{)))|(?:((?:\})))|(?:((?:\[)))|(?:((?:\])))|(?:(\s+)))/ym,
+                    regex: /(?:(?:(--[^\n]*))|(?:(\/\*[\s\S]*?\*\/))|(?:(\n))|(?:(var(?![a-zA-Z])))|(?:(function(?![a-zA-Z])))|(?:(true(?![a-zA-Z])))|(?:(false(?![a-zA-Z])))|(?:(null(?![a-zA-Z])))|(?:(and(?![a-zA-Z])))|(?:(or(?![a-zA-Z])))|(?:(on(?![a-zA-Z])))|(?:(if(?![a-zA-Z])))|(?:(in(?![a-zA-Z])))|(?:(each(?![a-zA-Z])))|(?:(else(?![a-zA-Z])))|(?:(for(?![a-zA-Z])))|(?:(not(?![a-zA-Z])))|(?:(while(?![a-zA-Z])))|(?:((?:ARRAY)))|(?:((?:BIGNUMERIC)))|(?:((?:BOOL)))|(?:((?:BYTES)))|(?:((?:DATE)))|(?:((?:DATETIME)))|(?:((?:FLOAT64)))|(?:((?:GEOGRAPHY)))|(?:((?:INT64)))|(?:((?:INTERVAL)))|(?:((?:JSON)))|(?:((?:NUMERIC)))|(?:((?:RANGE)))|(?:((?:STRING)))|(?:((?:STRUCT)))|(?:((?:TIME)))|(?:((?:TIMESTAMP)))|(?:(\d+))|(?:("(?:\\["bfnrt\/\\]|\\u[a-fA-F0-9]{4}|[^"\\])*"))|(?:(\/(?:[^\/\\\r\n]|\\.)+\/[gmiy]*))|(?:([_a-zA-Z][_a-zA-Z\d]*))|(?:((?:==)))|(?:((?:>=)))|(?:((?:<=)))|(?:((?:=)))|(?:((?:>)))|(?:((?:<)))|(?:((?:\+)))|(?:((?:\-)))|(?:((?:\/)))|(?:((?:%)))|(?:((?:\*)))|(?:((?:\^)))|(?:((?:;)))|(?:((?::)))|(?:((?:!)))|(?:((?:\.)))|(?:((?:,)))|(?:((?:\$)))|(?:((?:\()))|(?:((?:\))))|(?:((?:\{)))|(?:((?:\})))|(?:((?:\[)))|(?:((?:\])))|(?:([ \t\r]+)))/ym,
                     rules: [
+                        { highlight: "comment", tag: ["comment"], when: /--[^\n]*/ },
+                        { highlight: "comment", tag: ["comment"], when: /\/\*[\s\S]*?\*\// },
+                        { tag: ["newline"], when: /\n/ },
                         { highlight: "keyword", tag: ["keyword"], when: /var(?![a-zA-Z])/ },
                         { highlight: "keyword", tag: ["keyword"], when: /function(?![a-zA-Z])/ },
                         { highlight: "keyword", tag: ["keyword"], when: /true(?![a-zA-Z])/ },
@@ -140,7 +174,7 @@ class grammar {
                         { highlight: "delimiter", tag: ["l_rcurly"], when: "}" },
                         { highlight: "delimiter", tag: ["l_lbrack"], when: "[" },
                         { highlight: "delimiter", tag: ["l_rbrack"], when: "]" },
-                        { tag: ["ws"], when: /\s+/ }
+                        { tag: ["ws"], when: /[ \t\r]+/ }
                     ]
                 }
             }
