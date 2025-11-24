@@ -3,7 +3,11 @@ import Grammar from "../gramer/grammar";
 
 describe("Grammar", () => {
     it("should parse a simple query", () => {
-        const query = "CREATE TEMP FUNCTION ParseHttpCode(json INT64, a STRING) RETURNS INT64 AS ();";
+        const query = `CREATE TEMP FUNCTION Arithmetic(x INT64, y INT64, z INT64)
+RETURNS INT64
+AS (
+  x + y * z
+);`
 
         const grammar = new Grammar();
 

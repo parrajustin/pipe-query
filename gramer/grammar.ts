@@ -27,7 +27,7 @@ class grammar {
                     { name: "NL_", postprocess: ({data}) => { return (null); }, symbols: [ { token: "newline" } ] }
                 ],
                 PrivateScalarFunction: [
-                    { name: "PrivateScalarFunction", symbols: [ { literal: "CREATE" }, "__", "PrivateScalarFunction.SUBx1", "__", { literal: "FUNCTION" }, "__", { token: "word" }, { literal: "(" }, "PrivateScalarFunction.RPT01x1", { literal: ")" }, "__", { literal: "RETURNS" }, "__", { token: "dataType" }, "__", { literal: "AS" }, "_", { literal: "(" }, { literal: ")" }, { literal: ";" } ] }
+                    { name: "PrivateScalarFunction", symbols: [ { literal: "CREATE" }, "___", "PrivateScalarFunction.SUBx1", "___", { literal: "FUNCTION" }, "___", { token: "word" }, { literal: "(" }, "PrivateScalarFunction.RPT01x1", { literal: ")" }, "___", { literal: "RETURNS" }, "___", { token: "dataType" }, "___", { literal: "AS" }, "___", { literal: "(" }, "___", "scalar_expressions", "___", { literal: ")" }, { literal: ";" } ] }
                 ],
                 "PrivateScalarFunction.RPT01x1": [
                     { name: "PrivateScalarFunction.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "FunctionParams" ] },
@@ -38,36 +38,11 @@ class grammar {
                     { name: "PrivateScalarFunction.SUBx1", symbols: [ { literal: "PRIVATE" } ] }
                 ],
                 PublicScalarFunction: [
-                    { name: "PublicScalarFunction", symbols: [ { literal: "CREATE" }, "__", { literal: "PUBLIC" }, "__", { literal: "FUNCTION" }, "__", { token: "word" }, { literal: "(" }, "PublicScalarFunction.RPT01x1", { literal: ")" }, "__", { literal: "RETURNS" }, "__", { token: "dataType" }, "__", { literal: "AS" }, "_", { literal: "(" }, { literal: ")" }, { literal: ";" } ] }
+                    { name: "PublicScalarFunction", symbols: [ { literal: "CREATE" }, "___", { literal: "PUBLIC" }, "___", { literal: "FUNCTION" }, "___", { token: "word" }, { literal: "(" }, "PublicScalarFunction.RPT01x1", { literal: ")" }, "___", { literal: "RETURNS" }, "___", { token: "dataType" }, "___", { literal: "AS" }, "___", { literal: "(" }, { literal: ")" }, { literal: ";" } ] }
                 ],
                 "PublicScalarFunction.RPT01x1": [
                     { name: "PublicScalarFunction.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "FunctionParams" ] },
                     { name: "PublicScalarFunction.RPT01x1", postprocess: () => null, symbols: [ ] }
-                ],
-                QueryRoot: [
-                    { name: "QueryRoot", symbols: [ "QueryRoot.RPT01x1", "Sep", "PrivateScalarFunction" ] },
-                    { name: "QueryRoot", symbols: [ "QueryRoot.RPT01x2", "Sep", "PublicScalarFunction" ] },
-                    { name: "QueryRoot", symbols: [ "Sep" ] }
-                ],
-                "QueryRoot.RPT01x1": [
-                    { name: "QueryRoot.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "QueryRoot" ] },
-                    { name: "QueryRoot.RPT01x1", postprocess: () => null, symbols: [ ] }
-                ],
-                "QueryRoot.RPT01x2": [
-                    { name: "QueryRoot.RPT01x2", postprocess: ({data}) => data[0], symbols: [ "QueryRoot" ] },
-                    { name: "QueryRoot.RPT01x2", postprocess: () => null, symbols: [ ] }
-                ],
-                Sep: [
-                    { name: "Sep", postprocess: ({data}) => { return (null); }, symbols: [ "Sep.RPT0Nx1" ] }
-                ],
-                "Sep.RPT0Nx1": [
-                    { name: "Sep.RPT0Nx1", symbols: [ ] },
-                    { name: "Sep.RPT0Nx1", postprocess: ({data}) => data[0].concat([data[1]]), symbols: [ "Sep.RPT0Nx1", "Sep.RPT0Nx1.SUBx1" ] }
-                ],
-                "Sep.RPT0Nx1.SUBx1": [
-                    { name: "Sep.RPT0Nx1.SUBx1", symbols: [ "__" ] },
-                    { name: "Sep.RPT0Nx1.SUBx1", symbols: [ { token: "comment" } ] },
-                    { name: "Sep.RPT0Nx1.SUBx1", symbols: [ "NL_" ] }
                 ],
                 _: [
                     { name: "_", postprocess: ({data}) => { return (null); }, symbols: [ "_.RPT01x1" ] }
@@ -79,11 +54,45 @@ class grammar {
                 __: [
                     { name: "__", postprocess: ({data}) => { return (null); }, symbols: [ { token: "ws" } ] }
                 ],
+                ___: [
+                    { name: "___", postprocess: ({data}) => { return (null); }, symbols: [ "___.RPT0Nx1" ] }
+                ],
+                "___.RPT0Nx1": [
+                    { name: "___.RPT0Nx1", symbols: [ ] },
+                    { name: "___.RPT0Nx1", postprocess: ({data}) => data[0].concat([data[1]]), symbols: [ "___.RPT0Nx1", "___.RPT0Nx1.SUBx1" ] }
+                ],
+                "___.RPT0Nx1.SUBx1": [
+                    { name: "___.RPT0Nx1.SUBx1", symbols: [ "__" ] },
+                    { name: "___.RPT0Nx1.SUBx1", symbols: [ { token: "comment" } ] },
+                    { name: "___.RPT0Nx1.SUBx1", symbols: [ "NL_" ] }
+                ],
                 dummy: [
                     { name: "dummy", symbols: [ { literal: "dummy" } ] }
+                ],
+                main: [
+                    { name: "main", postprocess: ({data}) => { return (data[1]); }, symbols: [ "main.RPT0Nx1", "section_list", "_" ] }
+                ],
+                "main.RPT0Nx1": [
+                    { name: "main.RPT0Nx1", symbols: [ ] },
+                    { name: "main.RPT0Nx1", postprocess: ({data}) => data[0].concat([data[1]]), symbols: [ "main.RPT0Nx1", "main.RPT0Nx1.SUBx1" ] }
+                ],
+                "main.RPT0Nx1.SUBx1": [
+                    { name: "main.RPT0Nx1.SUBx1", symbols: [ "__" ] },
+                    { name: "main.RPT0Nx1.SUBx1", symbols: [ "NL_" ] }
+                ],
+                scalar_expressions: [
+                    { name: "scalar_expressions", symbols: [ { literal: "x" } ] }
+                ],
+                section: [
+                    { name: "section", symbols: [ "PrivateScalarFunction" ] },
+                    { name: "section", symbols: [ "PublicScalarFunction" ] }
+                ],
+                section_list: [
+                    { name: "section_list", postprocess: ({data}) => { return ([data[0]]); }, symbols: [ "section" ] },
+                    { name: "section_list", postprocess: ({data}) => { return ([data[0]].concat(data[2])); }, symbols: [ "section", "___", "section_list" ] }
                 ]
             },
-            start: "QueryRoot"
+            start: "main"
         },
         lexer: {
             start: "root",

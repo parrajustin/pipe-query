@@ -1,0 +1,74 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import { Parse } from "grammar-well";
+import Grammar from "../gramer/grammar";
+import { WrapToResult } from "../src/lib/wrap_to_result";
+
+const TEST_DATA_DIR = path.join(__dirname, 'testdata');
+
+describe("Parser", () => {
+    const parseFile = (filename: string) => {
+        // const filePath = path.join(TEST_DATA_DIR, filename);
+        // const content = fs.readFileSync(filePath, 'utf-8');
+        // console.log("content: ", content)
+        const content = `
+        CREATE TEMP FUNCTION Arithmetic(x INT64, y INT64, z INT64)
+RETURNS INT64
+AS (
+  x + y * z
+);`
+        const grammar = new Grammar();
+
+        return WrapToResult(() => Parse(grammar, content), /*textForUnknown=*/"Failed to parse grammer");
+    };
+
+    // it("should parse array_functions.sql", () => {
+    //     parseFile("array_functions.sql");
+    // });
+
+    // it("should parse js_udf.sql", () => {
+    //     parseFile("js_udf.sql");
+    // });
+
+    it("should parse operator_precedence.sql", () => {
+        const result = parseFile("operator_precedence.sql");
+        console.log(result);
+        if (result.err) {
+            console.log(result.val.toString());
+        }
+        expect(result.ok).toBeTruthy();
+    });
+
+    // it("should parse script.sql", () => {
+    //     parseFile("script.sql");
+    // });
+
+    // it("should parse tvf.sql", () => {
+    //     parseFile("tvf.sql");
+    // });
+
+    // it("should parse tvf_basic.sql", () => {
+    //     // TODO: Fix this parsing.
+    //     parseFile("tvf_basic.sql");
+    // });
+
+    // it("should parse tvf_complex.sql", () => {
+    //     parseFile("tvf_complex.sql");
+    // });
+
+    // it("should parse tvf_edge_cases.sql", () => {
+    //     parseFile("tvf_edge_cases.sql");
+    // });
+
+    // it("should parse tvf_params.sql", () => {
+    //     parseFile("tvf_params.sql");
+    // });
+
+    // it("should parse tvf_set_ops.sql", () => {
+    //     parseFile("tvf_set_ops.sql");
+    // });
+
+    // it("should parse udf_dependency.sql", () => {
+    //     parseFile("udf_dependency.sql");
+    // });
+});

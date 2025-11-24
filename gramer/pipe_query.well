@@ -75,27 +75,28 @@ lexer {
 }
 
 grammar {
-    start: QueryRoot
+	// Required to say the start of the grammer parse is the [main] rule.
+    start: main
+	
+	// Allows white space ane new lines before the start.
+	[main]
+		| (__ | NL_)* section_list _ => ( $1 )
 
-    [QueryRoot]
-        | QueryRoot? Sep PrivateScalarFunction
-		| QueryRoot? Sep PublicScalarFunction
-        | Sep
+	// Is made up of sections each can be seperated by unlimited white space, comments, and new lines.
+	[section_list]
+		| section => ( [$0] )
+		| section ___ section_list => ( [$0].concat($2) )
 
-    [Sep]
-        | ( __ | <comment> | NL_ )* => ( null )
-
-    [NL]
-        | <newline>? => ( null )
-
-    [NL_]
-        | <newline> => ( null )
+	// We only support private and public functions.
+	[section]
+		| PrivateScalarFunction
+		| PublicScalarFunction
 
 	[PrivateScalarFunction]
-        | "CREATE" __ ("TEMP" | "PRIVATE") __ "FUNCTION" __ <word> "(" FunctionParams? ")" __ "RETURNS" __ <dataType> __  "AS" _ "(" ")" ";"
+        | "CREATE" ___ ("TEMP" | "PRIVATE") ___ "FUNCTION" ___ <word> "(" FunctionParams? ")" ___ "RETURNS" ___ <dataType> ___  "AS" ___ "(" ___ scalar_expressions ___ ")" ";"
 
 	[PublicScalarFunction]
-        | "CREATE" __ "PUBLIC" __ "FUNCTION" __ <word> "(" FunctionParams? ")" __ "RETURNS" __ <dataType> __  "AS" _ "(" ")" ";"
+        | "CREATE" ___ "PUBLIC" ___ "FUNCTION" ___ <word> "(" FunctionParams? ")" ___ "RETURNS" ___ <dataType> ___  "AS" ___ "(" ")" ";"
 
 	[FunctionParams]
 		| FunctionParam
@@ -104,9 +105,27 @@ grammar {
 	[FunctionParam]
 		| <word> __ <dataType>
 
+	// TODO: implement scalar expressions.
+	[scalar_expressions]
+		| "x"
+
+	// Optional whitespace rule
 	[_]
 		| <ws>? => ( null )
 
+	// Required whitespace rule
 	[__]
 		| <ws> => ( null )
+
+	// Seperator rule that allows multiple whitespaace, comments, or new lines
+    [___]
+        | ( __ | <comment> | NL_ )* => ( null )
+
+	// Optional newline rule
+    [NL]
+        | <newline>? => ( null )
+
+	// Required newline rule
+    [NL_]
+        | <newline> => ( null )
 }
