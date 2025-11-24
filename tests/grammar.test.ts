@@ -7,7 +7,7 @@ describe("Grammar", () => {
 RETURNS INT64
 AS (
   x + y * z
-);`
+);`;
 
         const grammar = new Grammar();
 
