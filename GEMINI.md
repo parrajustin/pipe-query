@@ -6,6 +6,6 @@
 @./docs/grammar-well.md
 
 Additional imports:
-@./imports.md
-@./lexer.md
-@./grammar.md
+@./docs/imports.md
+@./docs/lexer.md
+@./docs/grammar.md
