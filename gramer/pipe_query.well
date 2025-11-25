@@ -9,23 +9,6 @@ lexer {
 		- when r:{\/\*[\s\S]*?\*\/} tag "comment" highlight "comment"
 		- when r:{\n} tag "newline"
 		- import keywords
-		- when "ARRAY" tag "dataType" highlight "array"
-		- when "BIGNUMERIC" tag "dataType" highlight "bignumeric"
-		- when "BOOL" tag "dataType" highlight "bool"
-		- when "BYTES" tag "dataType" highlight "bytes"
-		- when "DATE" tag "dataType" highlight "date"
-		- when "DATETIME" tag "dataType" highlight "datetime"
-		- when "FLOAT64" tag "dataType" highlight "float64"
-		- when "GEOGRAPHY" tag "dataType" highlight "geography"
-		- when "INT64" tag "dataType" highlight "int64"
-		- when "INTERVAL" tag "dataType" highlight "interval"
-		- when "JSON" tag "dataType" highlight "json"
-		- when "NUMERIC" tag "dataType" highlight "numeric"
-		- when "RANGE" tag "dataType" highlight "range"
-		- when "STRING" tag "dataType" highlight "string"
-		- when "STRUCT" tag "dataType" highlight "struct"
-		- when "TIME" tag "dataType" highlight "time"
-		- when "TIMESTAMP" tag "dataType" highlight "timestamp"
 		- when r:{\d+} tag "digits" highlight "number"
 		- when r:{"(?:\\["bfnrt\/\\]|\\u[a-fA-F0-9]{4}|[^"\\])*"} tag "string"
 		- when r:{\/(?:[^\/\\\r\n]|\\.)+\/[gmiy]*} tag "regex" highlight "regexp"
@@ -45,6 +28,9 @@ lexer {
 		- when ";" tag "l_semi" highlight "keyword"
 		- when ":" tag "l_col" highlight "keyword"
 		- when "!" tag "l_exc" highlight "keyword"
+		- when "&" tag "l_band" highlight "keyword"
+		- when "|" tag "l_bor" highlight "keyword"
+		- when "^" tag "l_exp" highlight "keyword"
 		- when "." tag "l_dot"
 		- when "," tag "l_comma" highlight "delimiter"
 		- when "$" tag "l_m" highlight "keyword"
@@ -57,21 +43,43 @@ lexer {
 		- when r:{[ \t\r]+} tag "ws"
 
 	[keywords]
-		- when r:{var(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{function(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{true(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{false(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{null(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{and(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{or(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{on(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{if(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{in(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{each(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{else(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{for(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{not(?![a-zA-Z])} tag "keyword" highlight "keyword"
-		- when r:{while(?![a-zA-Z])} tag "keyword" highlight "keyword"
+		- when r:{var\b} tag "keyword" highlight "keyword"
+		- when r:{function\b} tag "keyword" highlight "keyword"
+		- when r:{true\b} tag "keyword" highlight "keyword"
+		- when r:{false\b} tag "keyword" highlight "keyword"
+		- when r:{null\b} tag "keyword" highlight "keyword"
+		- when r:{and\b} tag "keyword" highlight "keyword"
+		- when r:{or\b} tag "keyword" highlight "keyword"
+		- when r:{on\b} tag "keyword" highlight "keyword"
+		- when r:{if\b} tag "keyword" highlight "keyword"
+		- when r:{in\b} tag "keyword" highlight "keyword"
+		- when r:{each\b} tag "keyword" highlight "keyword"
+		- when r:{else\b} tag "keyword" highlight "keyword"
+		- when r:{for\b} tag "keyword" highlight "keyword"
+		- when r:{not\b} tag "keyword" highlight "keyword"
+		- when r:{while\b} tag "keyword" highlight "keyword"
+		- when r:{IS\b} tag "keyword" highlight "keyword"
+		- when r:{IN\b} tag "keyword" highlight "keyword"
+		- when r:{LIKE\b} tag "keyword" highlight "keyword"
+		- when r:{BETWEEN\b} tag "keyword" highlight "keyword"
+		- when r:{AND\b} tag "keyword" highlight "keyword"
+		- when r:{OR\b} tag "keyword" highlight "keyword"
+		- when r:{NOT\b} tag "keyword" highlight "keyword"
+		- when r:{TRUE\b} tag "keyword" highlight "keyword"
+		- when r:{FALSE\b} tag "keyword" highlight "keyword"
+		- when r:{NULL\b} tag "keyword" highlight "keyword"
+		- when r:{CASE\b} tag "keyword" highlight "keyword"
+		- when r:{WHEN\b} tag "keyword" highlight "keyword"
+		- when r:{THEN\b} tag "keyword" highlight "keyword"
+		- when r:{ELSE\b} tag "keyword" highlight "keyword"
+		- when r:{END\b} tag "keyword" highlight "keyword"
+		- when r:{IF\b} tag "keyword" highlight "keyword"
+		- when r:{COALESCE\b} tag "keyword" highlight "keyword"
+		- when r:{NULLIF\b} tag "keyword" highlight "keyword"
+		- when r:{STRUCT\b} tag "keyword" highlight "keyword"
+		- when r:{ARRAY\b} tag "keyword" highlight "keyword"
+		- when r:{EXTRACT\b} tag "keyword" highlight "keyword"
+		- when r:{CAST\b} tag "keyword" highlight "keyword"
 }
 
 grammar {
@@ -80,12 +88,12 @@ grammar {
 	
 	// Allows white space ane new lines before the start.
 	[main]
-		| (__ | NL_)* section_list _ => ( $1 )
+		| _ section_list _ => ( $1 )
 
 	// Is made up of sections each can be seperated by unlimited white space, comments, and new lines.
 	[section_list]
 		| section => ( [$0] )
-		| section ___ section_list => ( [$0].concat($2) )
+		| section_list separator section => ( $0.concat($2) )
 
 	// We only support private and public functions.
 	[section]
@@ -93,39 +101,142 @@ grammar {
 		| PublicScalarFunction
 
 	[PrivateScalarFunction]
-        | "CREATE" ___ ("TEMP" | "PRIVATE") ___ "FUNCTION" ___ <word> "(" FunctionParams? ")" ___ "RETURNS" ___ <dataType> ___  "AS" ___ "(" ___ scalar_expressions ___ ")" ";"
+        | "CREATE" _ ("TEMP" | "PRIVATE") _ "FUNCTION" _ <word> "(" FunctionParams? ")" _ "RETURNS" _ DataType _ "AS" _ "(" _ Expression _ ")" ";"
 
 	[PublicScalarFunction]
-        | "CREATE" ___ "PUBLIC" ___ "FUNCTION" ___ <word> "(" FunctionParams? ")" ___ "RETURNS" ___ <dataType> ___  "AS" ___ "(" ")" ";"
+        | "CREATE" _ "PUBLIC" _ "FUNCTION" _ <word> "(" FunctionParams? ")" _ "RETURNS" _ DataType _ "AS" _ "(" ")" ";"
 
 	[FunctionParams]
 		| FunctionParam
 		| FunctionParams "," __ FunctionParam
 	
 	[FunctionParam]
-		| <word> __ <dataType>
+		| <word> __ DataType
+
+	[DataType]
+        | "ARRAY" __ "<" __ DataType __ ">"
+        | "STRUCT" __ "<" __ StructFields __ ">"
+        | "STRING" __ "(" __ <digits> __ ")"
+        | "BYTES" __ "(" __ <digits> __ ")"
+        | "NUMERIC" __ "(" __ <digits> __ ("," __ <digits>)? __ ")"
+        | "BIGNUMERIC" __ "(" __ <digits> __ ("," __ <digits>)? __ ")"
+        | "BOOL"
+        | "DATE"
+        | "DATETIME"
+        | "FLOAT64"
+        | "GEOGRAPHY"
+        | "INT64"
+        | "INTERVAL"
+        | "JSON"
+        | "NUMERIC"
+        | "RANGE"
+        | "STRING"
+        | "STRUCT"
+        | "TIME"
+        | "TIMESTAMP"
+
+    [StructFields]
+        | StructField ("," __ StructField)*
+
+    [StructField]
+        | <word> __ DataType
+        | DataType
 
 	// TODO: implement scalar expressions.
-	[scalar_expressions]
-		| "x"
+	[Expression]
+		| OrExpression
+
+	[OrExpression]
+		| AndExpression
+		| OrExpression __ "OR" __ AndExpression
+
+	[AndExpression]
+		| NotExpression
+		| AndExpression __ "AND" __ NotExpression
+
+	[NotExpression]
+		| "NOT" __ NotExpression
+		| ComparisonExpression
+
+	[ComparisonExpression]
+		| BitwiseOrExpression
+		| BitwiseOrExpression __ ComparisonOp __ BitwiseOrExpression
+		| BitwiseOrExpression __ "IS" __ ("NOT" __)? "NULL"
+		| BitwiseOrExpression __ "IS" __ ("NOT" __)? "TRUE"
+		| BitwiseOrExpression __ "IS" __ ("NOT" __)? "FALSE"
+		| BitwiseOrExpression __ ("NOT" __)? "IN" __ "(" __ ExpressionList __ ")"
+		| BitwiseOrExpression __ ("NOT" __)? "LIKE" __ BitwiseOrExpression
+		| BitwiseOrExpression __ ("NOT" __)? "BETWEEN" __ BitwiseOrExpression __ "AND" __ BitwiseOrExpression
+
+	[ComparisonOp]
+		| "=" | "!=" | "<>" | "<" | "<=" | ">" | ">="
+
+	[BitwiseOrExpression]
+		| BitwiseXorExpression
+		| BitwiseOrExpression __ "|" __ BitwiseXorExpression
+
+	[BitwiseXorExpression]
+		| BitwiseAndExpression
+		| BitwiseXorExpression __ "^" __ BitwiseAndExpression
+
+	[BitwiseAndExpression]
+		| BitwiseShiftExpression
+		| BitwiseAndExpression __ "&" __ BitwiseShiftExpression
+
+	[BitwiseShiftExpression]
+		| AdditiveExpression
+		| BitwiseShiftExpression __ "<<" __ AdditiveExpression
+		| BitwiseShiftExpression __ ">>" __ AdditiveExpression
+
+	[AdditiveExpression]
+		| MultiplicativeExpression
+		| AdditiveExpression __ "+" __ MultiplicativeExpression
+		| AdditiveExpression __ "-" __ MultiplicativeExpression
+
+	[MultiplicativeExpression]
+		| UnaryExpression
+		| MultiplicativeExpression __ "*" __ UnaryExpression
+		| MultiplicativeExpression __ "/" __ UnaryExpression
+		| MultiplicativeExpression __ "||" __ UnaryExpression
+
+	[UnaryExpression]
+		| "+" __ UnaryExpression
+		| "-" __ UnaryExpression
+		| "~" __ UnaryExpression
+		| PostfixExpression
+
+	[PostfixExpression]
+		| PrimaryExpression
+		| PostfixExpression "." <word>
+		| PostfixExpression "[" __ Expression __ "]"
+		| PostfixExpression "[" __ "OFFSET" "(" __ Expression __ ")" __ "]"
+		| PostfixExpression "[" __ "ORDINAL" "(" __ Expression __ ")" __ "]"
+
+	[PrimaryExpression]
+		| Literal
+		| Identifier
+		| "(" _ Expression _ ")"
+		| "CAST" "(" __ Expression __ "AS" __ DataType __ ")"
+
+	[Identifier]
+		| <word>
+
+	[ExpressionList]
+		| Expression ("," __ Expression)*
+
+	[Literal]
+		| <digits>
+		| <string>
 
 	// Optional whitespace rule
 	[_]
-		| <ws>? => ( null )
+		| ( __ | <comment> | <newline> )*
 
 	// Required whitespace rule
 	[__]
 		| <ws> => ( null )
 
 	// Seperator rule that allows multiple whitespaace, comments, or new lines
-    [___]
-        | ( __ | <comment> | NL_ )* => ( null )
-
-	// Optional newline rule
-    [NL]
-        | <newline>? => ( null )
-
-	// Required newline rule
-    [NL_]
-        | <newline> => ( null )
+    [separator]
+        | ( __ | <comment> | <newline> )+
 }
