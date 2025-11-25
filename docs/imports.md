@@ -17,7 +17,7 @@ import <rules> from <source>;
 ```
 
 - `<rules>`: The specific rules to import. Use `*` to import all rules.
-- `<source>`: The path to the file containing the rules to import.
+- `<source>`: The path to the file containing the rules to import. For user-defined modules, the source path should be a double-quoted string (e.g., "my_module.well").
 
 ### Example
 
