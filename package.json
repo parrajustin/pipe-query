@@ -28,7 +28,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "grammar-well": "file:./third_party/grammar-well",
+    "grammar-well": "file:third_party/grammar-well",
     "moo": "^0.5.2",
     "tslib": "^2.8.1"
   }

@@ -180,10 +180,85 @@ export interface ExprVisitor<R> {
     visitVariableExpr(expr: Variable, context?: any): R;
     visitGetExpr(expr: Get, context?: any): R;
     visitCaseExpr(expr: CaseExpr, context?: any): R;
+    visitIsNullExpr(expr: IsNullExpr, context?: any): R;
+    visitIsBoolExpr(expr: IsBoolExpr, context?: any): R;
+    visitInExpr(expr: InExpr, context?: any): R;
+    visitLikeExpr(expr: LikeExpr, context?: any): R;
+    visitBetweenExpr(expr: BetweenExpr, context?: any): R;
 }
 
 export abstract class Expr {
     abstract accept<R>(visitor: ExprVisitor<R>, context?: any): R;
+}
+
+export class BetweenExpr extends Expr {
+    constructor(
+        public readonly expression: Expr,
+        public readonly not: boolean,
+        public readonly lower: Expr,
+        public readonly upper: Expr
+    ) {
+        super();
+    }
+
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitBetweenExpr(this, context);
+    }
+}
+
+export class LikeExpr extends Expr {
+    constructor(
+        public readonly expression: Expr,
+        public readonly not: boolean,
+        public readonly pattern: Expr
+    ) {
+        super();
+    }
+
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitLikeExpr(this, context);
+    }
+}
+
+export class InExpr extends Expr {
+    constructor(
+        public readonly expression: Expr,
+        public readonly not: boolean,
+        public readonly values: Expr[]
+    ) {
+        super();
+    }
+
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitInExpr(this, context);
+    }
+}
+
+export class IsNullExpr extends Expr {
+    constructor(
+        public readonly expression: Expr,
+        public readonly not: boolean
+    ) {
+        super();
+    }
+
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitIsNullExpr(this, context);
+    }
+}
+
+export class IsBoolExpr extends Expr {
+    constructor(
+        public readonly expression: Expr,
+        public readonly not: boolean,
+        public readonly value: boolean
+    ) {
+        super();
+    }
+
+    accept<R>(visitor: ExprVisitor<R>, context?: any): R {
+        return visitor.visitIsBoolExpr(this, context);
+    }
 }
 
 export class CaseExpr extends Expr {
@@ -347,6 +422,7 @@ export class FunctionParam {
 
 export class CreateFunctionStmt extends Stmt {
     constructor(
+        public readonly is_private: boolean,
         public readonly modifiers: string[], // TEMP, PUBLIC, PRIVATE
         public readonly name: string,
         public readonly params: FunctionParam[],
