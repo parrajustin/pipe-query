@@ -99,7 +99,7 @@ grammar {
 	// We only support private and public functions.
 	[section]
 		| PrivateScalarFunction => ( $0 )
-		| PublicScalarFunction
+		| PublicScalarFunction => ( $0 )
 
 	[PrivateScalarFunction]
         | "CREATE" _ ("TEMP" | "PRIVATE") _ "FUNCTION" _ <word> "(" FunctionParams? ")" _ "RETURNS" _ DataType _ "AS" _ "(" _ Expression _ ")" ";" => (
@@ -117,7 +117,19 @@ grammar {
         )
 
 	[PublicScalarFunction]
-        | "CREATE" _ "PUBLIC" _ "FUNCTION" _ <word> "(" FunctionParams? ")" _ "RETURNS" _ DataType _ "AS" _ "(" ")" ";"
+        | "CREATE" _ "PUBLIC" _ "FUNCTION" _ <word> "(" FunctionParams? ")" _ "RETURNS" _ DataType _ "AS" _ "(" _ Expression _ ")" ";" => (
+            new CreateFunctionStmt(
+                false,
+                ["PUBLIC"],
+                $6.value,
+                $8 || [],
+                $13,
+                null, // determinism
+                null, // language
+                [],   // options
+                $19
+            )
+        )
 
 	[FunctionParams]
 		| FunctionParam => ( [$0] )

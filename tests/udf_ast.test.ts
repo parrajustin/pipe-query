@@ -71,6 +71,25 @@ AS (
         expect(createFunctionStmt.is_private).toBe(true);
     });
 
+    it("should correctly identify a public function", () => {
+        const query = `CREATE PUBLIC FUNCTION PublicFunc(x INT64)
+RETURNS INT64
+AS (
+  x
+);`;
+
+        const grammar = new Grammar();
+        const result = Parse(grammar, query);
+
+        expect(result).toBeDefined();
+        expect(result).toBeInstanceOf(Array);
+        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+
+        const createFunctionStmt = result[0] as CreateFunctionStmt;
+        expect(createFunctionStmt.name).toBe("PublicFunc");
+        expect(createFunctionStmt.is_private).toBe(false);
+    });
+
     it("should handle unary operators and concatenation", () => {
         const query = `CREATE TEMP FUNCTION UnaryConcat(x STRING, y INT64)
 RETURNS STRING

@@ -218,7 +218,17 @@ class grammar {
                     { name: "PrivateScalarFunction.SUBx1", symbols: [ { literal: "PRIVATE" } ] }
                 ],
                 PublicScalarFunction: [
-                    { name: "PublicScalarFunction", symbols: [ { literal: "CREATE" }, "_", { literal: "PUBLIC" }, "_", { literal: "FUNCTION" }, "_", { token: "word" }, { literal: "(" }, "PublicScalarFunction.RPT01x1", { literal: ")" }, "_", { literal: "RETURNS" }, "_", "DataType", "_", { literal: "AS" }, "_", { literal: "(" }, { literal: ")" }, { literal: ";" } ] }
+                    { name: "PublicScalarFunction", postprocess: ({data}) => { return (new CreateFunctionStmt(
+                false,
+                ["PUBLIC"],
+                data[6].value,
+                data[8] || [],
+                data[13],
+                null, // determinism
+                null, // language
+                [],   // options
+                data[19]
+            )); }, symbols: [ { literal: "CREATE" }, "_", { literal: "PUBLIC" }, "_", { literal: "FUNCTION" }, "_", { token: "word" }, { literal: "(" }, "PublicScalarFunction.RPT01x1", { literal: ")" }, "_", { literal: "RETURNS" }, "_", "DataType", "_", { literal: "AS" }, "_", { literal: "(" }, "_", "Expression", "_", { literal: ")" }, { literal: ";" } ] }
                 ],
                 "PublicScalarFunction.RPT01x1": [
                     { name: "PublicScalarFunction.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "FunctionParams" ] },
@@ -267,7 +277,7 @@ class grammar {
                 ],
                 section: [
                     { name: "section", postprocess: ({data}) => { return (data[0]); }, symbols: [ "PrivateScalarFunction" ] },
-                    { name: "section", symbols: [ "PublicScalarFunction" ] }
+                    { name: "section", postprocess: ({data}) => { return (data[0]); }, symbols: [ "PublicScalarFunction" ] }
                 ],
                 section_list: [
                     { name: "section_list", postprocess: ({data}) => { return ([data[0]]); }, symbols: [ "section" ] },
