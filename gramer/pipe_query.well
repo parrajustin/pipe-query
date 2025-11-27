@@ -29,6 +29,7 @@ lexer {
 		- when ":" tag "l_col" highlight "keyword"
 		- when "!" tag "l_exc" highlight "keyword"
 		- when "&" tag "l_band" highlight "keyword"
+		- when "||" tag "l_bor" highlight "keyword"
 		- when "|" tag "l_bor" highlight "keyword"
 		- when "^" tag "l_exp" highlight "keyword"
 		- when "." tag "l_dot"
@@ -97,21 +98,33 @@ grammar {
 
 	// We only support private and public functions.
 	[section]
-		| PrivateScalarFunction
+		| PrivateScalarFunction => ( $0 )
 		| PublicScalarFunction
 
 	[PrivateScalarFunction]
-        | "CREATE" _ ("TEMP" | "PRIVATE") _ "FUNCTION" _ <word> "(" FunctionParams? ")" _ "RETURNS" _ DataType _ "AS" _ "(" _ Expression _ ")" ";"
+        | "CREATE" _ ("TEMP" | "PRIVATE") _ "FUNCTION" _ <word> "(" FunctionParams? ")" _ "RETURNS" _ DataType _ "AS" _ "(" _ Expression _ ")" ";" => (
+            new CreateFunctionStmt(
+                $2[0].value === "PRIVATE",
+                [$2[0].value],
+                $6.value,
+                $8 || [],
+                $13,
+                null, // determinism
+                null, // language
+                [],   // options
+                $19
+            )
+        )
 
 	[PublicScalarFunction]
         | "CREATE" _ "PUBLIC" _ "FUNCTION" _ <word> "(" FunctionParams? ")" _ "RETURNS" _ DataType _ "AS" _ "(" ")" ";"
 
 	[FunctionParams]
-		| FunctionParam
-		| FunctionParams "," __ FunctionParam
+		| FunctionParam => ( [$0] )
+		| FunctionParams "," __ FunctionParam => ( $0.concat([$3]) )
 	
 	[FunctionParam]
-		| <word> __ DataType
+		| <word> __ DataType => ( new FunctionParam($0.value, $2) )
 
 	[DataType]
         | "ARRAY" __ "<" __ DataType __ ">"
@@ -120,20 +133,20 @@ grammar {
         | "BYTES" __ "(" __ <digits> __ ")"
         | "NUMERIC" __ "(" __ <digits> __ ("," __ <digits>)? __ ")"
         | "BIGNUMERIC" __ "(" __ <digits> __ ("," __ <digits>)? __ ")"
-        | "BOOL"
-        | "DATE"
-        | "DATETIME"
-        | "FLOAT64"
-        | "GEOGRAPHY"
-        | "INT64"
-        | "INTERVAL"
-        | "JSON"
-        | "NUMERIC"
+        | "BOOL" => ( new SimpleType(SimpleTypeKind.BOOL) )
+        | "DATE" => ( new SimpleType(SimpleTypeKind.DATE) )
+        | "DATETIME" => ( new SimpleType(SimpleTypeKind.DATETIME) )
+        | "FLOAT64" => ( new SimpleType(SimpleTypeKind.FLOAT64) )
+        | "GEOGRAPHY" => ( new SimpleType(SimpleTypeKind.GEOGRAPHY) )
+        | "INT64" => ( new SimpleType(SimpleTypeKind.INT64) )
+        | "INTERVAL" => ( new SimpleType(SimpleTypeKind.INTERVAL) )
+        | "JSON" => ( new SimpleType(SimpleTypeKind.JSON) )
+        | "NUMERIC" => ( new SimpleType(SimpleTypeKind.NUMERIC) )
         | "RANGE"
-        | "STRING"
+        | "STRING" => ( new SimpleType(SimpleTypeKind.STRING) )
         | "STRUCT"
-        | "TIME"
-        | "TIMESTAMP"
+        | "TIME" => ( new SimpleType(SimpleTypeKind.TIME) )
+        | "TIMESTAMP" => ( new SimpleType(SimpleTypeKind.TIMESTAMP) )
 
     [StructFields]
         | StructField ("," __ StructField)*
@@ -144,89 +157,106 @@ grammar {
 
 	// TODO: implement scalar expressions.
 	[Expression]
-		| OrExpression
+		| OrExpression => ( $0 )
 
 	[OrExpression]
-		| AndExpression
-		| OrExpression __ "OR" __ AndExpression
+		| AndExpression => ( $0 )
+		| OrExpression __ "OR" __ AndExpression => ( new Binary($0, BinaryOperator.OR, $4) )
 
 	[AndExpression]
-		| NotExpression
-		| AndExpression __ "AND" __ NotExpression
+		| NotExpression => ( $0 )
+		| AndExpression __ "AND" __ NotExpression => ( new Binary($0, BinaryOperator.AND, $4) )
 
 	[NotExpression]
-		| "NOT" __ NotExpression
-		| ComparisonExpression
+		| "NOT" __ NotExpression => ( new Unary(UnaryOperator.NOT, $2) )
+		| ComparisonExpression => ( $0 )
 
 	[ComparisonExpression]
-		| BitwiseOrExpression
-		| BitwiseOrExpression __ ComparisonOp __ BitwiseOrExpression
-		| BitwiseOrExpression __ "IS" __ ("NOT" __)? "NULL"
-		| BitwiseOrExpression __ "IS" __ ("NOT" __)? "TRUE"
-		| BitwiseOrExpression __ "IS" __ ("NOT" __)? "FALSE"
-		| BitwiseOrExpression __ ("NOT" __)? "IN" __ "(" __ ExpressionList __ ")"
-		| BitwiseOrExpression __ ("NOT" __)? "LIKE" __ BitwiseOrExpression
-		| BitwiseOrExpression __ ("NOT" __)? "BETWEEN" __ BitwiseOrExpression __ "AND" __ BitwiseOrExpression
+		| BitwiseOrExpression => ( $0 )
+		| BitwiseOrExpression __ ComparisonOp __ BitwiseOrExpression => ( new Binary($0, $2, $4) )
+		| BitwiseOrExpression __ "IS" __ ("NOT" __)? "NULL" => ( new IsNullExpr($0, !!$4) )
+		| BitwiseOrExpression __ "IS" __ ("NOT" __)? "TRUE" => ( new IsBoolExpr($0, !!$4, true) )
+		| BitwiseOrExpression __ "IS" __ ("NOT" __)? "FALSE" => ( new IsBoolExpr($0, !!$4, false) )
+		| BitwiseOrExpression _ ("NOT" _)? "IN" _ "(" _ ExpressionList _ ")" => ( new InExpr($0, !!$2, $7) )
+		| BitwiseOrExpression __ ("NOT" __)? "LIKE" __ BitwiseOrExpression => ( new LikeExpr($0, !!$2, $5) )
+		| BitwiseOrExpression __ ("NOT" __)? "BETWEEN" __ BitwiseOrExpression __ "AND" __ BitwiseOrExpression => ( new BetweenExpr($0, !!$2, $5, $9) )
 
 	[ComparisonOp]
-		| "=" | "!=" | "<>" | "<" | "<=" | ">" | ">="
+		| "=" => ( BinaryOperator.EQUALS )
+		| "!=" => ( BinaryOperator.NOT_EQUALS )
+		| "<>" => ( BinaryOperator.NOT_EQUALS )
+		| "<" => ( BinaryOperator.LESS_THAN )
+		| "<=" => ( BinaryOperator.LESS_THAN_OR_EQUAL )
+		| ">" => ( BinaryOperator.GREATER_THAN )
+		| ">=" => ( BinaryOperator.GREATER_THAN_OR_EQUAL )
 
 	[BitwiseOrExpression]
-		| BitwiseXorExpression
-		| BitwiseOrExpression __ "|" __ BitwiseXorExpression
+		| BitwiseXorExpression => ( $0 )
+		| BitwiseOrExpression __ "|" __ BitwiseXorExpression => ( new Binary($0, BinaryOperator.BITWISE_OR, $4) )
 
 	[BitwiseXorExpression]
-		| BitwiseAndExpression
-		| BitwiseXorExpression __ "^" __ BitwiseAndExpression
+		| BitwiseAndExpression => ( $0 )
+		| BitwiseXorExpression __ "^" __ BitwiseAndExpression => ( new Binary($0, BinaryOperator.BITWISE_XOR, $4) )
 
 	[BitwiseAndExpression]
-		| BitwiseShiftExpression
-		| BitwiseAndExpression __ "&" __ BitwiseShiftExpression
+		| BitwiseShiftExpression => ( $0 )
+		| BitwiseAndExpression __ "&" __ BitwiseShiftExpression => ( new Binary($0, BinaryOperator.BITWISE_AND, $4) )
 
 	[BitwiseShiftExpression]
-		| AdditiveExpression
-		| BitwiseShiftExpression __ "<<" __ AdditiveExpression
-		| BitwiseShiftExpression __ ">>" __ AdditiveExpression
+		| AdditiveExpression => ( $0 )
+		| BitwiseShiftExpression __ "<<" __ AdditiveExpression => ( new Binary($0, BinaryOperator.BITWISE_LEFT_SHIFT, $4) )
+		| BitwiseShiftExpression __ ">>" __ AdditiveExpression => ( new Binary($0, BinaryOperator.BITWISE_RIGHT_SHIFT, $4) )
 
 	[AdditiveExpression]
-		| MultiplicativeExpression
-		| AdditiveExpression __ "+" __ MultiplicativeExpression
-		| AdditiveExpression __ "-" __ MultiplicativeExpression
+		| MultiplicativeExpression => ( $0 )
+		| AdditiveExpression __ "+" __ MultiplicativeExpression => ( new Binary($0, BinaryOperator.PLUS, $4) )
+		| AdditiveExpression __ "-" __ MultiplicativeExpression => ( new Binary($0, BinaryOperator.MINUS, $4) )
 
 	[MultiplicativeExpression]
-		| UnaryExpression
-		| MultiplicativeExpression __ "*" __ UnaryExpression
-		| MultiplicativeExpression __ "/" __ UnaryExpression
-		| MultiplicativeExpression __ "||" __ UnaryExpression
+		| UnaryExpression => ( $0 )
+		| MultiplicativeExpression __ "*" __ UnaryExpression => ( new Binary($0, BinaryOperator.MULTIPLY, $4) )
+		| MultiplicativeExpression __ "/" __ UnaryExpression => ( new Binary($0, BinaryOperator.DIVIDE, $4) )
+		| MultiplicativeExpression __ "||" __ UnaryExpression => ( new Binary($0, BinaryOperator.CONCAT, $4) )
 
 	[UnaryExpression]
-		| "+" __ UnaryExpression
-		| "-" __ UnaryExpression
-		| "~" __ UnaryExpression
-		| PostfixExpression
+		| "+" _ UnaryExpression => ( new Unary(UnaryOperator.PLUS, $2) )
+		| "-" _ UnaryExpression => ( new Unary(UnaryOperator.MINUS, $2) )
+		| "~" _ UnaryExpression => ( new Unary(UnaryOperator.BITWISE_NOT, $2) )
+		| PostfixExpression => ( $0 )
 
 	[PostfixExpression]
-		| PrimaryExpression
+		| PrimaryExpression => ( $0 )
 		| PostfixExpression "." <word>
 		| PostfixExpression "[" __ Expression __ "]"
 		| PostfixExpression "[" __ "OFFSET" "(" __ Expression __ ")" __ "]"
 		| PostfixExpression "[" __ "ORDINAL" "(" __ Expression __ ")" __ "]"
 
 	[PrimaryExpression]
-		| Literal
-		| Identifier
-		| "(" _ Expression _ ")"
+		| Literal => ( $0 )
+		| Identifier => ( $0 )
+		| "(" _ Expression _ ")" => ( $2 )
 		| "CAST" "(" __ Expression __ "AS" __ DataType __ ")"
+		| "CASE" _ Expression _ CaseWhenClauses _ ("ELSE" _ Expression)? _ "END" => (
+			new CaseExpr(
+				$4,
+				$6 ? $6[2] : null
+			)
+		)
+
+	[CaseWhenClauses]
+		| "WHEN" _ Expression _ "THEN" _ Expression => ( [{ condition: $2, result: $6 }] )
+		| CaseWhenClauses _ "WHEN" _ Expression _ "THEN" _ Expression => ( $0.concat([{ condition: $4, result: $8 }]) )
 
 	[Identifier]
-		| <word>
+		| <word> => ( new Variable($0.value) )
 
 	[ExpressionList]
-		| Expression ("," __ Expression)*
+		| Expression => ( [$0] )
+		| ExpressionList _ "," _ Expression => ( $0.concat([$4]) )
 
 	[Literal]
-		| <digits>
-		| <string>
+		| <digits> => ( new Literal(LiteralKind.INT, $0.value) )
+		| <string> => ( new Literal(LiteralKind.STRING, $0.value) )
 
 	// Optional whitespace rule
 	[_]

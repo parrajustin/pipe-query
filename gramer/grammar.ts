@@ -1,3 +1,4 @@
+import { BetweenExpr, Binary, BinaryOperator, CaseExpr, CreateFunctionStmt, FunctionParam, InExpr, IsBoolExpr, IsNullExpr, LikeExpr, Literal, LiteralKind, SimpleType, SimpleTypeKind, Unary, UnaryOperator, Variable } from "../src/parser/ast";
 // Generated automatically by Grammar-Well, version 2.0.7 
 // https://github.com/0x6563/grammar-well
 // @ts-nocheck
@@ -10,40 +11,44 @@ class grammar {
         grammar: {
             rules: {
                 AdditiveExpression: [
-                    { name: "AdditiveExpression", symbols: [ "MultiplicativeExpression" ] },
-                    { name: "AdditiveExpression", symbols: [ "AdditiveExpression", "__", { literal: "+" }, "__", "MultiplicativeExpression" ] },
-                    { name: "AdditiveExpression", symbols: [ "AdditiveExpression", "__", { literal: "-" }, "__", "MultiplicativeExpression" ] }
+                    { name: "AdditiveExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "MultiplicativeExpression" ] },
+                    { name: "AdditiveExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.PLUS, data[4])); }, symbols: [ "AdditiveExpression", "__", { literal: "+" }, "__", "MultiplicativeExpression" ] },
+                    { name: "AdditiveExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.MINUS, data[4])); }, symbols: [ "AdditiveExpression", "__", { literal: "-" }, "__", "MultiplicativeExpression" ] }
                 ],
                 AndExpression: [
-                    { name: "AndExpression", symbols: [ "NotExpression" ] },
-                    { name: "AndExpression", symbols: [ "AndExpression", "__", { literal: "AND" }, "__", "NotExpression" ] }
+                    { name: "AndExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "NotExpression" ] },
+                    { name: "AndExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.AND, data[4])); }, symbols: [ "AndExpression", "__", { literal: "AND" }, "__", "NotExpression" ] }
                 ],
                 BitwiseAndExpression: [
-                    { name: "BitwiseAndExpression", symbols: [ "BitwiseShiftExpression" ] },
-                    { name: "BitwiseAndExpression", symbols: [ "BitwiseAndExpression", "__", { literal: "&" }, "__", "BitwiseShiftExpression" ] }
+                    { name: "BitwiseAndExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "BitwiseShiftExpression" ] },
+                    { name: "BitwiseAndExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.BITWISE_AND, data[4])); }, symbols: [ "BitwiseAndExpression", "__", { literal: "&" }, "__", "BitwiseShiftExpression" ] }
                 ],
                 BitwiseOrExpression: [
-                    { name: "BitwiseOrExpression", symbols: [ "BitwiseXorExpression" ] },
-                    { name: "BitwiseOrExpression", symbols: [ "BitwiseOrExpression", "__", { literal: "|" }, "__", "BitwiseXorExpression" ] }
+                    { name: "BitwiseOrExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "BitwiseXorExpression" ] },
+                    { name: "BitwiseOrExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.BITWISE_OR, data[4])); }, symbols: [ "BitwiseOrExpression", "__", { literal: "|" }, "__", "BitwiseXorExpression" ] }
                 ],
                 BitwiseShiftExpression: [
-                    { name: "BitwiseShiftExpression", symbols: [ "AdditiveExpression" ] },
-                    { name: "BitwiseShiftExpression", symbols: [ "BitwiseShiftExpression", "__", { literal: "<<" }, "__", "AdditiveExpression" ] },
-                    { name: "BitwiseShiftExpression", symbols: [ "BitwiseShiftExpression", "__", { literal: ">>" }, "__", "AdditiveExpression" ] }
+                    { name: "BitwiseShiftExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "AdditiveExpression" ] },
+                    { name: "BitwiseShiftExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.BITWISE_LEFT_SHIFT, data[4])); }, symbols: [ "BitwiseShiftExpression", "__", { literal: "<<" }, "__", "AdditiveExpression" ] },
+                    { name: "BitwiseShiftExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.BITWISE_RIGHT_SHIFT, data[4])); }, symbols: [ "BitwiseShiftExpression", "__", { literal: ">>" }, "__", "AdditiveExpression" ] }
                 ],
                 BitwiseXorExpression: [
-                    { name: "BitwiseXorExpression", symbols: [ "BitwiseAndExpression" ] },
-                    { name: "BitwiseXorExpression", symbols: [ "BitwiseXorExpression", "__", { literal: "^" }, "__", "BitwiseAndExpression" ] }
+                    { name: "BitwiseXorExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "BitwiseAndExpression" ] },
+                    { name: "BitwiseXorExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.BITWISE_XOR, data[4])); }, symbols: [ "BitwiseXorExpression", "__", { literal: "^" }, "__", "BitwiseAndExpression" ] }
+                ],
+                CaseWhenClauses: [
+                    { name: "CaseWhenClauses", postprocess: ({data}) => { return ([{ condition: data[2], result: data[6] }]); }, symbols: [ { literal: "WHEN" }, "_", "Expression", "_", { literal: "THEN" }, "_", "Expression" ] },
+                    { name: "CaseWhenClauses", postprocess: ({data}) => { return (data[0].concat([{ condition: data[4], result: data[8] }])); }, symbols: [ "CaseWhenClauses", "_", { literal: "WHEN" }, "_", "Expression", "_", { literal: "THEN" }, "_", "Expression" ] }
                 ],
                 ComparisonExpression: [
-                    { name: "ComparisonExpression", symbols: [ "BitwiseOrExpression" ] },
-                    { name: "ComparisonExpression", symbols: [ "BitwiseOrExpression", "__", "ComparisonOp", "__", "BitwiseOrExpression" ] },
-                    { name: "ComparisonExpression", symbols: [ "BitwiseOrExpression", "__", { literal: "IS" }, "__", "ComparisonExpression.RPT01x1", { literal: "NULL" } ] },
-                    { name: "ComparisonExpression", symbols: [ "BitwiseOrExpression", "__", { literal: "IS" }, "__", "ComparisonExpression.RPT01x2", { literal: "TRUE" } ] },
-                    { name: "ComparisonExpression", symbols: [ "BitwiseOrExpression", "__", { literal: "IS" }, "__", "ComparisonExpression.RPT01x3", { literal: "FALSE" } ] },
-                    { name: "ComparisonExpression", symbols: [ "BitwiseOrExpression", "__", "ComparisonExpression.RPT01x4", { literal: "IN" }, "__", { literal: "(" }, "__", "ExpressionList", "__", { literal: ")" } ] },
-                    { name: "ComparisonExpression", symbols: [ "BitwiseOrExpression", "__", "ComparisonExpression.RPT01x5", { literal: "LIKE" }, "__", "BitwiseOrExpression" ] },
-                    { name: "ComparisonExpression", symbols: [ "BitwiseOrExpression", "__", "ComparisonExpression.RPT01x6", { literal: "BETWEEN" }, "__", "BitwiseOrExpression", "__", { literal: "AND" }, "__", "BitwiseOrExpression" ] }
+                    { name: "ComparisonExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "BitwiseOrExpression" ] },
+                    { name: "ComparisonExpression", postprocess: ({data}) => { return (new Binary(data[0], data[2], data[4])); }, symbols: [ "BitwiseOrExpression", "__", "ComparisonOp", "__", "BitwiseOrExpression" ] },
+                    { name: "ComparisonExpression", postprocess: ({data}) => { return (new IsNullExpr(data[0], !!data[4])); }, symbols: [ "BitwiseOrExpression", "__", { literal: "IS" }, "__", "ComparisonExpression.RPT01x1", { literal: "NULL" } ] },
+                    { name: "ComparisonExpression", postprocess: ({data}) => { return (new IsBoolExpr(data[0], !!data[4], true)); }, symbols: [ "BitwiseOrExpression", "__", { literal: "IS" }, "__", "ComparisonExpression.RPT01x2", { literal: "TRUE" } ] },
+                    { name: "ComparisonExpression", postprocess: ({data}) => { return (new IsBoolExpr(data[0], !!data[4], false)); }, symbols: [ "BitwiseOrExpression", "__", { literal: "IS" }, "__", "ComparisonExpression.RPT01x3", { literal: "FALSE" } ] },
+                    { name: "ComparisonExpression", postprocess: ({data}) => { return (new InExpr(data[0], !!data[2], data[7])); }, symbols: [ "BitwiseOrExpression", "_", "ComparisonExpression.RPT01x4", { literal: "IN" }, "_", { literal: "(" }, "_", "ExpressionList", "_", { literal: ")" } ] },
+                    { name: "ComparisonExpression", postprocess: ({data}) => { return (new LikeExpr(data[0], !!data[2], data[5])); }, symbols: [ "BitwiseOrExpression", "__", "ComparisonExpression.RPT01x5", { literal: "LIKE" }, "__", "BitwiseOrExpression" ] },
+                    { name: "ComparisonExpression", postprocess: ({data}) => { return (new BetweenExpr(data[0], !!data[2], data[5], data[9])); }, symbols: [ "BitwiseOrExpression", "__", "ComparisonExpression.RPT01x6", { literal: "BETWEEN" }, "__", "BitwiseOrExpression", "__", { literal: "AND" }, "__", "BitwiseOrExpression" ] }
                 ],
                 "ComparisonExpression.RPT01x1": [
                     { name: "ComparisonExpression.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "ComparisonExpression.RPT01x1.SUBx1" ] },
@@ -71,7 +76,7 @@ class grammar {
                     { name: "ComparisonExpression.RPT01x4", postprocess: () => null, symbols: [ ] }
                 ],
                 "ComparisonExpression.RPT01x4.SUBx1": [
-                    { name: "ComparisonExpression.RPT01x4.SUBx1", symbols: [ { literal: "NOT" }, "__" ] }
+                    { name: "ComparisonExpression.RPT01x4.SUBx1", symbols: [ { literal: "NOT" }, "_" ] }
                 ],
                 "ComparisonExpression.RPT01x5": [
                     { name: "ComparisonExpression.RPT01x5", postprocess: ({data}) => data[0], symbols: [ "ComparisonExpression.RPT01x5.SUBx1" ] },
@@ -88,13 +93,13 @@ class grammar {
                     { name: "ComparisonExpression.RPT01x6.SUBx1", symbols: [ { literal: "NOT" }, "__" ] }
                 ],
                 ComparisonOp: [
-                    { name: "ComparisonOp", symbols: [ { literal: "=" } ] },
-                    { name: "ComparisonOp", symbols: [ { literal: "!=" } ] },
-                    { name: "ComparisonOp", symbols: [ { literal: "<>" } ] },
-                    { name: "ComparisonOp", symbols: [ { literal: "<" } ] },
-                    { name: "ComparisonOp", symbols: [ { literal: "<=" } ] },
-                    { name: "ComparisonOp", symbols: [ { literal: ">" } ] },
-                    { name: "ComparisonOp", symbols: [ { literal: ">=" } ] }
+                    { name: "ComparisonOp", postprocess: ({data}) => { return (BinaryOperator.EQUALS); }, symbols: [ { literal: "=" } ] },
+                    { name: "ComparisonOp", postprocess: ({data}) => { return (BinaryOperator.NOT_EQUALS); }, symbols: [ { literal: "!=" } ] },
+                    { name: "ComparisonOp", postprocess: ({data}) => { return (BinaryOperator.NOT_EQUALS); }, symbols: [ { literal: "<>" } ] },
+                    { name: "ComparisonOp", postprocess: ({data}) => { return (BinaryOperator.LESS_THAN); }, symbols: [ { literal: "<" } ] },
+                    { name: "ComparisonOp", postprocess: ({data}) => { return (BinaryOperator.LESS_THAN_OR_EQUAL); }, symbols: [ { literal: "<=" } ] },
+                    { name: "ComparisonOp", postprocess: ({data}) => { return (BinaryOperator.GREATER_THAN); }, symbols: [ { literal: ">" } ] },
+                    { name: "ComparisonOp", postprocess: ({data}) => { return (BinaryOperator.GREATER_THAN_OR_EQUAL); }, symbols: [ { literal: ">=" } ] }
                 ],
                 DataType: [
                     { name: "DataType", symbols: [ { literal: "ARRAY" }, "__", { literal: "<" }, "__", "DataType", "__", { literal: ">" } ] },
@@ -103,20 +108,20 @@ class grammar {
                     { name: "DataType", symbols: [ { literal: "BYTES" }, "__", { literal: "(" }, "__", { token: "digits" }, "__", { literal: ")" } ] },
                     { name: "DataType", symbols: [ { literal: "NUMERIC" }, "__", { literal: "(" }, "__", { token: "digits" }, "__", "DataType.RPT01x1", "__", { literal: ")" } ] },
                     { name: "DataType", symbols: [ { literal: "BIGNUMERIC" }, "__", { literal: "(" }, "__", { token: "digits" }, "__", "DataType.RPT01x2", "__", { literal: ")" } ] },
-                    { name: "DataType", symbols: [ { literal: "BOOL" } ] },
-                    { name: "DataType", symbols: [ { literal: "DATE" } ] },
-                    { name: "DataType", symbols: [ { literal: "DATETIME" } ] },
-                    { name: "DataType", symbols: [ { literal: "FLOAT64" } ] },
-                    { name: "DataType", symbols: [ { literal: "GEOGRAPHY" } ] },
-                    { name: "DataType", symbols: [ { literal: "INT64" } ] },
-                    { name: "DataType", symbols: [ { literal: "INTERVAL" } ] },
-                    { name: "DataType", symbols: [ { literal: "JSON" } ] },
-                    { name: "DataType", symbols: [ { literal: "NUMERIC" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.BOOL)); }, symbols: [ { literal: "BOOL" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.DATE)); }, symbols: [ { literal: "DATE" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.DATETIME)); }, symbols: [ { literal: "DATETIME" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.FLOAT64)); }, symbols: [ { literal: "FLOAT64" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.GEOGRAPHY)); }, symbols: [ { literal: "GEOGRAPHY" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.INT64)); }, symbols: [ { literal: "INT64" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.INTERVAL)); }, symbols: [ { literal: "INTERVAL" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.JSON)); }, symbols: [ { literal: "JSON" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.NUMERIC)); }, symbols: [ { literal: "NUMERIC" } ] },
                     { name: "DataType", symbols: [ { literal: "RANGE" } ] },
-                    { name: "DataType", symbols: [ { literal: "STRING" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.STRING)); }, symbols: [ { literal: "STRING" } ] },
                     { name: "DataType", symbols: [ { literal: "STRUCT" } ] },
-                    { name: "DataType", symbols: [ { literal: "TIME" } ] },
-                    { name: "DataType", symbols: [ { literal: "TIMESTAMP" } ] }
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.TIME)); }, symbols: [ { literal: "TIME" } ] },
+                    { name: "DataType", postprocess: ({data}) => { return (new SimpleType(SimpleTypeKind.TIMESTAMP)); }, symbols: [ { literal: "TIMESTAMP" } ] }
                 ],
                 "DataType.RPT01x1": [
                     { name: "DataType.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "DataType.RPT01x1.SUBx1" ] },
@@ -133,61 +138,76 @@ class grammar {
                     { name: "DataType.RPT01x2.SUBx1", symbols: [ { literal: "," }, "__", { token: "digits" } ] }
                 ],
                 Expression: [
-                    { name: "Expression", symbols: [ "OrExpression" ] }
+                    { name: "Expression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "OrExpression" ] }
                 ],
                 ExpressionList: [
-                    { name: "ExpressionList", symbols: [ "Expression", "ExpressionList.RPT0Nx1" ] }
-                ],
-                "ExpressionList.RPT0Nx1": [
-                    { name: "ExpressionList.RPT0Nx1", symbols: [ ] },
-                    { name: "ExpressionList.RPT0Nx1", postprocess: ({data}) => data[0].concat([data[1]]), symbols: [ "ExpressionList.RPT0Nx1", "ExpressionList.RPT0Nx1.SUBx1" ] }
-                ],
-                "ExpressionList.RPT0Nx1.SUBx1": [
-                    { name: "ExpressionList.RPT0Nx1.SUBx1", symbols: [ { literal: "," }, "__", "Expression" ] }
+                    { name: "ExpressionList", postprocess: ({data}) => { return ([data[0]]); }, symbols: [ "Expression" ] },
+                    { name: "ExpressionList", postprocess: ({data}) => { return (data[0].concat([data[4]])); }, symbols: [ "ExpressionList", "_", { literal: "," }, "_", "Expression" ] }
                 ],
                 FunctionParam: [
-                    { name: "FunctionParam", symbols: [ { token: "word" }, "__", "DataType" ] }
+                    { name: "FunctionParam", postprocess: ({data}) => { return (new FunctionParam(data[0].value, data[2])); }, symbols: [ { token: "word" }, "__", "DataType" ] }
                 ],
                 FunctionParams: [
-                    { name: "FunctionParams", symbols: [ "FunctionParam" ] },
-                    { name: "FunctionParams", symbols: [ "FunctionParams", { literal: "," }, "__", "FunctionParam" ] }
+                    { name: "FunctionParams", postprocess: ({data}) => { return ([data[0]]); }, symbols: [ "FunctionParam" ] },
+                    { name: "FunctionParams", postprocess: ({data}) => { return (data[0].concat([data[3]])); }, symbols: [ "FunctionParams", { literal: "," }, "__", "FunctionParam" ] }
                 ],
                 Identifier: [
-                    { name: "Identifier", symbols: [ { token: "word" } ] }
+                    { name: "Identifier", postprocess: ({data}) => { return (new Variable(data[0].value)); }, symbols: [ { token: "word" } ] }
                 ],
                 Literal: [
-                    { name: "Literal", symbols: [ { token: "digits" } ] },
-                    { name: "Literal", symbols: [ { token: "string" } ] }
+                    { name: "Literal", postprocess: ({data}) => { return (new Literal(LiteralKind.INT, data[0].value)); }, symbols: [ { token: "digits" } ] },
+                    { name: "Literal", postprocess: ({data}) => { return (new Literal(LiteralKind.STRING, data[0].value)); }, symbols: [ { token: "string" } ] }
                 ],
                 MultiplicativeExpression: [
-                    { name: "MultiplicativeExpression", symbols: [ "UnaryExpression" ] },
-                    { name: "MultiplicativeExpression", symbols: [ "MultiplicativeExpression", "__", { literal: "*" }, "__", "UnaryExpression" ] },
-                    { name: "MultiplicativeExpression", symbols: [ "MultiplicativeExpression", "__", { literal: "/" }, "__", "UnaryExpression" ] },
-                    { name: "MultiplicativeExpression", symbols: [ "MultiplicativeExpression", "__", { literal: "||" }, "__", "UnaryExpression" ] }
+                    { name: "MultiplicativeExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "UnaryExpression" ] },
+                    { name: "MultiplicativeExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.MULTIPLY, data[4])); }, symbols: [ "MultiplicativeExpression", "__", { literal: "*" }, "__", "UnaryExpression" ] },
+                    { name: "MultiplicativeExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.DIVIDE, data[4])); }, symbols: [ "MultiplicativeExpression", "__", { literal: "/" }, "__", "UnaryExpression" ] },
+                    { name: "MultiplicativeExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.CONCAT, data[4])); }, symbols: [ "MultiplicativeExpression", "__", { literal: "||" }, "__", "UnaryExpression" ] }
                 ],
                 NotExpression: [
-                    { name: "NotExpression", symbols: [ { literal: "NOT" }, "__", "NotExpression" ] },
-                    { name: "NotExpression", symbols: [ "ComparisonExpression" ] }
+                    { name: "NotExpression", postprocess: ({data}) => { return (new Unary(UnaryOperator.NOT, data[2])); }, symbols: [ { literal: "NOT" }, "__", "NotExpression" ] },
+                    { name: "NotExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "ComparisonExpression" ] }
                 ],
                 OrExpression: [
-                    { name: "OrExpression", symbols: [ "AndExpression" ] },
-                    { name: "OrExpression", symbols: [ "OrExpression", "__", { literal: "OR" }, "__", "AndExpression" ] }
+                    { name: "OrExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "AndExpression" ] },
+                    { name: "OrExpression", postprocess: ({data}) => { return (new Binary(data[0], BinaryOperator.OR, data[4])); }, symbols: [ "OrExpression", "__", { literal: "OR" }, "__", "AndExpression" ] }
                 ],
                 PostfixExpression: [
-                    { name: "PostfixExpression", symbols: [ "PrimaryExpression" ] },
+                    { name: "PostfixExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "PrimaryExpression" ] },
                     { name: "PostfixExpression", symbols: [ "PostfixExpression", { literal: "." }, { token: "word" } ] },
                     { name: "PostfixExpression", symbols: [ "PostfixExpression", { literal: "[" }, "__", "Expression", "__", { literal: "]" } ] },
                     { name: "PostfixExpression", symbols: [ "PostfixExpression", { literal: "[" }, "__", { literal: "OFFSET" }, { literal: "(" }, "__", "Expression", "__", { literal: ")" }, "__", { literal: "]" } ] },
                     { name: "PostfixExpression", symbols: [ "PostfixExpression", { literal: "[" }, "__", { literal: "ORDINAL" }, { literal: "(" }, "__", "Expression", "__", { literal: ")" }, "__", { literal: "]" } ] }
                 ],
                 PrimaryExpression: [
-                    { name: "PrimaryExpression", symbols: [ "Literal" ] },
-                    { name: "PrimaryExpression", symbols: [ "Identifier" ] },
-                    { name: "PrimaryExpression", symbols: [ { literal: "(" }, "_", "Expression", "_", { literal: ")" } ] },
-                    { name: "PrimaryExpression", symbols: [ { literal: "CAST" }, { literal: "(" }, "__", "Expression", "__", { literal: "AS" }, "__", "DataType", "__", { literal: ")" } ] }
+                    { name: "PrimaryExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "Literal" ] },
+                    { name: "PrimaryExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "Identifier" ] },
+                    { name: "PrimaryExpression", postprocess: ({data}) => { return (data[2]); }, symbols: [ { literal: "(" }, "_", "Expression", "_", { literal: ")" } ] },
+                    { name: "PrimaryExpression", symbols: [ { literal: "CAST" }, { literal: "(" }, "__", "Expression", "__", { literal: "AS" }, "__", "DataType", "__", { literal: ")" } ] },
+                    { name: "PrimaryExpression", postprocess: ({data}) => { return (new CaseExpr(
+				data[4],
+				data[6] ? data[6][2] : null
+			)); }, symbols: [ { literal: "CASE" }, "_", "Expression", "_", "CaseWhenClauses", "_", "PrimaryExpression.RPT01x1", "_", { literal: "END" } ] }
+                ],
+                "PrimaryExpression.RPT01x1": [
+                    { name: "PrimaryExpression.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "PrimaryExpression.RPT01x1.SUBx1" ] },
+                    { name: "PrimaryExpression.RPT01x1", postprocess: () => null, symbols: [ ] }
+                ],
+                "PrimaryExpression.RPT01x1.SUBx1": [
+                    { name: "PrimaryExpression.RPT01x1.SUBx1", symbols: [ { literal: "ELSE" }, "_", "Expression" ] }
                 ],
                 PrivateScalarFunction: [
-                    { name: "PrivateScalarFunction", symbols: [ { literal: "CREATE" }, "_", "PrivateScalarFunction.SUBx1", "_", { literal: "FUNCTION" }, "_", { token: "word" }, { literal: "(" }, "PrivateScalarFunction.RPT01x1", { literal: ")" }, "_", { literal: "RETURNS" }, "_", "DataType", "_", { literal: "AS" }, "_", { literal: "(" }, "_", "Expression", "_", { literal: ")" }, { literal: ";" } ] }
+                    { name: "PrivateScalarFunction", postprocess: ({data}) => { return (new CreateFunctionStmt(
+                data[2][0].value === "PRIVATE",
+                [data[2][0].value],
+                data[6].value,
+                data[8] || [],
+                data[13],
+                null, // determinism
+                null, // language
+                [],   // options
+                data[19]
+            )); }, symbols: [ { literal: "CREATE" }, "_", "PrivateScalarFunction.SUBx1", "_", { literal: "FUNCTION" }, "_", { token: "word" }, { literal: "(" }, "PrivateScalarFunction.RPT01x1", { literal: ")" }, "_", { literal: "RETURNS" }, "_", "DataType", "_", { literal: "AS" }, "_", { literal: "(" }, "_", "Expression", "_", { literal: ")" }, { literal: ";" } ] }
                 ],
                 "PrivateScalarFunction.RPT01x1": [
                     { name: "PrivateScalarFunction.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "FunctionParams" ] },
@@ -219,10 +239,10 @@ class grammar {
                     { name: "StructFields.RPT0Nx1.SUBx1", symbols: [ { literal: "," }, "__", "StructField" ] }
                 ],
                 UnaryExpression: [
-                    { name: "UnaryExpression", symbols: [ { literal: "+" }, "__", "UnaryExpression" ] },
-                    { name: "UnaryExpression", symbols: [ { literal: "-" }, "__", "UnaryExpression" ] },
-                    { name: "UnaryExpression", symbols: [ { literal: "~" }, "__", "UnaryExpression" ] },
-                    { name: "UnaryExpression", symbols: [ "PostfixExpression" ] }
+                    { name: "UnaryExpression", postprocess: ({data}) => { return (new Unary(UnaryOperator.PLUS, data[2])); }, symbols: [ { literal: "+" }, "_", "UnaryExpression" ] },
+                    { name: "UnaryExpression", postprocess: ({data}) => { return (new Unary(UnaryOperator.MINUS, data[2])); }, symbols: [ { literal: "-" }, "_", "UnaryExpression" ] },
+                    { name: "UnaryExpression", postprocess: ({data}) => { return (new Unary(UnaryOperator.BITWISE_NOT, data[2])); }, symbols: [ { literal: "~" }, "_", "UnaryExpression" ] },
+                    { name: "UnaryExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "PostfixExpression" ] }
                 ],
                 _: [
                     { name: "_", symbols: [ "_.RPT0Nx1" ] }
@@ -246,7 +266,7 @@ class grammar {
                     { name: "main", postprocess: ({data}) => { return (data[1]); }, symbols: [ "_", "section_list", "_" ] }
                 ],
                 section: [
-                    { name: "section", symbols: [ "PrivateScalarFunction" ] },
+                    { name: "section", postprocess: ({data}) => { return (data[0]); }, symbols: [ "PrivateScalarFunction" ] },
                     { name: "section", symbols: [ "PublicScalarFunction" ] }
                 ],
                 section_list: [
@@ -319,7 +339,7 @@ class grammar {
                     ]
                 },
                 root: {
-                    regex: /(?:(?:(--[^\n]*))|(?:(\/\*[\s\S]*?\*\/))|(?:(\n))|(?:(var\b))|(?:(function\b))|(?:(true\b))|(?:(false\b))|(?:(null\b))|(?:(and\b))|(?:(or\b))|(?:(on\b))|(?:(if\b))|(?:(in\b))|(?:(each\b))|(?:(else\b))|(?:(for\b))|(?:(not\b))|(?:(while\b))|(?:(IS\b))|(?:(IN\b))|(?:(LIKE\b))|(?:(BETWEEN\b))|(?:(AND\b))|(?:(OR\b))|(?:(NOT\b))|(?:(TRUE\b))|(?:(FALSE\b))|(?:(NULL\b))|(?:(CASE\b))|(?:(WHEN\b))|(?:(THEN\b))|(?:(ELSE\b))|(?:(END\b))|(?:(IF\b))|(?:(COALESCE\b))|(?:(NULLIF\b))|(?:(STRUCT\b))|(?:(ARRAY\b))|(?:(EXTRACT\b))|(?:(CAST\b))|(?:(\d+))|(?:("(?:\\["bfnrt\/\\]|\\u[a-fA-F0-9]{4}|[^"\\])*"))|(?:(\/(?:[^\/\\\r\n]|\\.)+\/[gmiy]*))|(?:([_a-zA-Z][_a-zA-Z\d]*))|(?:((?:==)))|(?:((?:>=)))|(?:((?:<=)))|(?:((?:=)))|(?:((?:>)))|(?:((?:<)))|(?:((?:\+)))|(?:((?:\-)))|(?:((?:\/)))|(?:((?:%)))|(?:((?:\*)))|(?:((?:\^)))|(?:((?:;)))|(?:((?::)))|(?:((?:!)))|(?:((?:&)))|(?:((?:\|)))|(?:((?:\.)))|(?:((?:,)))|(?:((?:\$)))|(?:((?:\()))|(?:((?:\))))|(?:((?:\{)))|(?:((?:\})))|(?:((?:\[)))|(?:((?:\])))|(?:([ \t\r]+)))/ym,
+                    regex: /(?:(?:(--[^\n]*))|(?:(\/\*[\s\S]*?\*\/))|(?:(\n))|(?:(var\b))|(?:(function\b))|(?:(true\b))|(?:(false\b))|(?:(null\b))|(?:(and\b))|(?:(or\b))|(?:(on\b))|(?:(if\b))|(?:(in\b))|(?:(each\b))|(?:(else\b))|(?:(for\b))|(?:(not\b))|(?:(while\b))|(?:(IS\b))|(?:(IN\b))|(?:(LIKE\b))|(?:(BETWEEN\b))|(?:(AND\b))|(?:(OR\b))|(?:(NOT\b))|(?:(TRUE\b))|(?:(FALSE\b))|(?:(NULL\b))|(?:(CASE\b))|(?:(WHEN\b))|(?:(THEN\b))|(?:(ELSE\b))|(?:(END\b))|(?:(IF\b))|(?:(COALESCE\b))|(?:(NULLIF\b))|(?:(STRUCT\b))|(?:(ARRAY\b))|(?:(EXTRACT\b))|(?:(CAST\b))|(?:(\d+))|(?:("(?:\\["bfnrt\/\\]|\\u[a-fA-F0-9]{4}|[^"\\])*"))|(?:(\/(?:[^\/\\\r\n]|\\.)+\/[gmiy]*))|(?:([_a-zA-Z][_a-zA-Z\d]*))|(?:((?:==)))|(?:((?:>=)))|(?:((?:<=)))|(?:((?:=)))|(?:((?:>)))|(?:((?:<)))|(?:((?:\+)))|(?:((?:\-)))|(?:((?:\/)))|(?:((?:%)))|(?:((?:\*)))|(?:((?:\^)))|(?:((?:;)))|(?:((?::)))|(?:((?:!)))|(?:((?:&)))|(?:((?:\|\|)))|(?:((?:\|)))|(?:((?:\.)))|(?:((?:,)))|(?:((?:\$)))|(?:((?:\()))|(?:((?:\))))|(?:((?:\{)))|(?:((?:\})))|(?:((?:\[)))|(?:((?:\])))|(?:([ \t\r]+)))/ym,
                     rules: [
                         { highlight: "comment", tag: ["comment"], when: /--[^\n]*/ },
                         { highlight: "comment", tag: ["comment"], when: /\/\*[\s\S]*?\*\// },
@@ -381,6 +401,7 @@ class grammar {
                         { highlight: "keyword", tag: ["l_col"], when: ":" },
                         { highlight: "keyword", tag: ["l_exc"], when: "!" },
                         { highlight: "keyword", tag: ["l_band"], when: "&" },
+                        { highlight: "keyword", tag: ["l_bor"], when: "||" },
                         { highlight: "keyword", tag: ["l_bor"], when: "|" },
                         { tag: ["l_dot"], when: "." },
                         { highlight: "delimiter", tag: ["l_comma"], when: "," },
