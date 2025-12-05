@@ -5,7 +5,7 @@ import {
     Binary,
     BinaryOperator,
     CaseExpr,
-    CreateFunctionStmt,
+    CreateFunctionDefinitionStmt,
     InExpr,
     IsBoolExpr,
     IsNullExpr,
@@ -30,15 +30,15 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.name).toBe("Arithmetic");
-        expect(createFunctionStmt.is_private).toBe(false);
-        expect(createFunctionStmt.params.length).toBe(3);
-        expect(createFunctionStmt.body).toBeInstanceOf(Binary);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.getName()).toBe("Arithmetic");
+        expect(createFunctionStmt.isPrivate).toBe(true);
+        expect(createFunctionStmt.bodyStmt.params.length).toBe(3);
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(Binary);
 
-        const body = createFunctionStmt.body as Binary;
+        const body = createFunctionStmt.bodyStmt.body as Binary;
         expect(body.operator).toBe(BinaryOperator.PLUS);
         expect(body.left).toBeInstanceOf(Variable);
         expect((body.left as Variable).name).toBe("x");
@@ -64,11 +64,11 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.name).toBe("PrivateFunc");
-        expect(createFunctionStmt.is_private).toBe(true);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.getName()).toBe("PrivateFunc");
+        expect(createFunctionStmt.isPrivate).toBe(true);
     });
 
     it("should correctly identify a public function", () => {
@@ -83,11 +83,11 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.name).toBe("PublicFunc");
-        expect(createFunctionStmt.is_private).toBe(false);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.getName()).toBe("PublicFunc");
+        expect(createFunctionStmt.isPrivate).toBe(false);
     });
 
     it("should handle unary operators and concatenation", () => {
@@ -102,12 +102,12 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.body).toBeInstanceOf(Binary);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(Binary);
 
-        const body = createFunctionStmt.body as Binary;
+        const body = createFunctionStmt.bodyStmt.body as Binary;
         expect(body.operator).toBe(BinaryOperator.CONCAT);
         expect(body.left).toBeInstanceOf(Variable);
         expect((body.left as Variable).name).toBe("x");
@@ -131,12 +131,12 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.body).toBeInstanceOf(Binary);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(Binary);
 
-        const body = createFunctionStmt.body as Binary;
+        const body = createFunctionStmt.bodyStmt.body as Binary;
         expect(body.operator).toBe(BinaryOperator.OR);
         expect(body.left).toBeInstanceOf(Variable);
         expect((body.left as Variable).name).toBe("x");
@@ -166,12 +166,12 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.body).toBeInstanceOf(Binary);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(Binary);
 
-        const body = createFunctionStmt.body as Binary;
+        const body = createFunctionStmt.bodyStmt.body as Binary;
         expect(body.operator).toBe(BinaryOperator.GREATER_THAN);
         expect(body.left).toBeInstanceOf(Variable);
         expect((body.left as Variable).name).toBe("x");
@@ -191,12 +191,12 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.body).toBeInstanceOf(Binary);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(Binary);
 
-        const body = createFunctionStmt.body as Binary;
+        const body = createFunctionStmt.bodyStmt.body as Binary;
         expect(body.operator).toBe(BinaryOperator.AND);
 
         expect(body.left).toBeInstanceOf(IsNullExpr);
@@ -225,12 +225,12 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.body).toBeInstanceOf(InExpr);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(InExpr);
 
-        const body = createFunctionStmt.body as InExpr;
+        const body = createFunctionStmt.bodyStmt.body as InExpr;
         expect(body.not).toBe(false);
         expect(body.expression).toBeInstanceOf(Variable);
         expect((body.expression as Variable).name).toBe("x");
@@ -253,12 +253,12 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.body).toBeInstanceOf(LikeExpr);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(LikeExpr);
 
-        const body = createFunctionStmt.body as LikeExpr;
+        const body = createFunctionStmt.bodyStmt.body as LikeExpr;
         expect(body.not).toBe(false);
         expect(body.expression).toBeInstanceOf(Variable);
         expect((body.expression as Variable).name).toBe("x");
@@ -268,7 +268,7 @@ AS (
     });
 
     it("should handle BETWEEN expressions", () => {
-        const query = `CREATE TEMP FUNCTION BetweenExpr(x INT64)
+        const query = `CREATE PUBLIC FUNCTION BetweenExpr(x INT64)
 RETURNS BOOL
 AS (
   x BETWEEN 1 AND 10
@@ -279,12 +279,12 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.body).toBeInstanceOf(BetweenExpr);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(BetweenExpr);
 
-        const body = createFunctionStmt.body as BetweenExpr;
+        const body = createFunctionStmt.bodyStmt.body as BetweenExpr;
         expect(body.not).toBe(false);
         expect(body.expression).toBeInstanceOf(Variable);
         expect((body.expression as Variable).name).toBe("x");
@@ -311,12 +311,12 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.body).toBeInstanceOf(CaseExpr);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(CaseExpr);
 
-        const body = createFunctionStmt.body as CaseExpr;
+        const body = createFunctionStmt.bodyStmt.body as CaseExpr;
         expect(body.cases.length).toBe(2);
         expect(body.cases[0].condition).toBeInstanceOf(Literal);
         expect((body.cases[0].condition as Literal).value).toBe("1");
@@ -327,7 +327,7 @@ AS (
     });
 
     it("should handle bitwise expressions", () => {
-        const query = `CREATE TEMP FUNCTION Bitwise(x INT64, y INT64, z INT64)
+        const query = `CREATE PUBLIC FUNCTION Bitwise(x INT64, y INT64, z INT64)
 RETURNS INT64
 AS (
   x & y | z
@@ -338,12 +338,12 @@ AS (
 
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array);
-        expect(result[0]).toBeInstanceOf(CreateFunctionStmt);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
 
-        const createFunctionStmt = result[0] as CreateFunctionStmt;
-        expect(createFunctionStmt.body).toBeInstanceOf(Binary);
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(Binary);
 
-        const body = createFunctionStmt.body as Binary;
+        const body = createFunctionStmt.bodyStmt.body as Binary;
         expect(body.operator).toBe(BinaryOperator.BITWISE_OR);
 
         expect(body.left).toBeInstanceOf(Binary);
@@ -356,5 +356,27 @@ AS (
 
         expect(body.right).toBeInstanceOf(Variable);
         expect((body.right as Variable).name).toBe("z");
+    });
+
+    it("should handle literal expressions", () => {
+        const query = `CREATE PUBLIC FUNCTION LiteralFunc()
+RETURNS INT64
+AS (
+  5
+);`;
+
+        const grammar = new Grammar();
+        const result = Parse(grammar, query);
+
+        expect(result).toBeDefined();
+        expect(result).toBeInstanceOf(Array);
+        expect(result[0]).toBeInstanceOf(CreateFunctionDefinitionStmt);
+
+        const createFunctionStmt = result[0] as CreateFunctionDefinitionStmt;
+        expect(createFunctionStmt.bodyStmt.body).toBeInstanceOf(Literal);
+
+        const body = createFunctionStmt.bodyStmt.body as Literal;
+        expect(body.kind).toBe(LiteralKind.INT);
+        expect(body.value).toBe('5');
     });
 });

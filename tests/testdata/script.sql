@@ -43,16 +43,18 @@ CREATE TEMP TABLE FUNCTION DeduplicateByUser(
 
 -- Use a WITH clause to create sample data for this example.
 WITH RawEvents AS (
-  SELECT 1 AS event_id, 'user_A' AS user_id, CURRENT_TIMESTAMP() AS event_timestamp, '{"http_response_code": "503"}' AS raw_json_payload UNION ALL
-  SELECT 2, 'user_A', TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 10 SECOND), '{"http_response_code": "503"}' UNION ALL
-  SELECT 3, 'user_B', CURRENT_TIMESTAMP(), '{"http_response_code": "404"}' UNION ALL
-  SELECT 4, 'user_C', CURRENT_TIMESTAMP(), '{"http_response_code": "200"}' UNION ALL
-  SELECT 5, 'user_B', TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 70 SECOND), '{"http_response_code": "404"}' UNION ALL
-  SELECT 6, 'user_A', TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 80 SECOND), '{"http_response_code": "503"}' UNION ALL
-  SELECT 7, 'user_D', CURRENT_TIMESTAMP(), '{"http_response_code": "401"}' UNION ALL
-  SELECT 8, 'user_D', CURRENT_TIMESTAMP(), '{"http_response_code": "401"}' UNION ALL
-  SELECT 9, 'user_E', CURRENT_TIMESTAMP(), '{"http_response_code": "500"}' UNION ALL
-  SELECT 10, 'user_E', CURRENT_TIMESTAMP(), '{"other_key": "value"}' -- This will be an 'Unparsed' error
+  FROM UNNEST([
+    STRUCT(1 AS event_id, 'user_A' AS user_id, CURRENT_TIMESTAMP() AS event_timestamp, '{"http_response_code": "503"}' AS raw_json_payload),
+    STRUCT(2, 'user_A', TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 10 SECOND), '{"http_response_code": "503"}'),
+    STRUCT(3, 'user_B', CURRENT_TIMESTAMP(), '{"http_response_code": "404"}'),
+    STRUCT(4, 'user_C', CURRENT_TIMESTAMP(), '{"http_response_code": "200"}'),
+    STRUCT(5, 'user_B', TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 70 SECOND), '{"http_response_code": "404"}'),
+    STRUCT(6, 'user_A', TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 80 SECOND), '{"http_response_code": "503"}'),
+    STRUCT(7, 'user_D', CURRENT_TIMESTAMP(), '{"http_response_code": "401"}'),
+    STRUCT(8, 'user_D', CURRENT_TIMESTAMP(), '{"http_response_code": "401"}'),
+    STRUCT(9, 'user_E', CURRENT_TIMESTAMP(), '{"http_response_code": "500"}'),
+    STRUCT(10, 'user_E', CURRENT_TIMESTAMP(), '{"other_key": "value"}')
+  ])
 )
 
 -- This is the main query. Its structure is unchanged, as the TVF's

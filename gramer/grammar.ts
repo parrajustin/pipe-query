@@ -1,4 +1,4 @@
-import { BetweenExpr, Binary, BinaryOperator, CaseExpr, CreateFunctionStmt, FunctionParam, InExpr, IsBoolExpr, IsNullExpr, LikeExpr, Literal, LiteralKind, SimpleType, SimpleTypeKind, Unary, UnaryOperator, Variable } from "../src/parser/ast";
+import { BetweenExpr, Binary, BinaryOperator, CaseExpr, CreateFunctionStmt, CreateFunctionDefinitionStmt, FunctionParam, FunctionBodyStmt, InExpr, IsBoolExpr, IsNullExpr, LikeExpr, Literal, LiteralKind, SimpleType, SimpleTypeKind, Unary, UnaryOperator, Variable } from "../src/parser/ast";
 // Generated automatically by Grammar-Well, version 2.0.7 
 // https://github.com/0x6563/grammar-well
 // @ts-nocheck
@@ -144,6 +144,14 @@ class grammar {
                     { name: "ExpressionList", postprocess: ({data}) => { return ([data[0]]); }, symbols: [ "Expression" ] },
                     { name: "ExpressionList", postprocess: ({data}) => { return (data[0].concat([data[4]])); }, symbols: [ "ExpressionList", "_", { literal: "," }, "_", "Expression" ] }
                 ],
+                FunctionBody: [
+                    { name: "FunctionBody", postprocess: ({data}) => { return (new FunctionBodyStmt(
+                data[3].value,
+                data[5] || [],
+                data[10],
+                data[16]
+            )); }, symbols: [ "_", { literal: "FUNCTION" }, "_", { token: "word" }, { literal: "(" }, "MaybeFunctionParams", { literal: ")" }, "_", { literal: "RETURNS" }, "_", "DataType", "_", { literal: "AS" }, "_", { literal: "(" }, "_", "MaybeExpression", "_", { literal: ")" }, { literal: ";" } ] }
+                ],
                 FunctionParam: [
                     { name: "FunctionParam", postprocess: ({data}) => { return (new FunctionParam(data[0].value, data[2])); }, symbols: [ { token: "word" }, "__", "DataType" ] }
                 ],
@@ -157,6 +165,20 @@ class grammar {
                 Literal: [
                     { name: "Literal", postprocess: ({data}) => { return (new Literal(LiteralKind.INT, data[0].value)); }, symbols: [ { token: "digits" } ] },
                     { name: "Literal", postprocess: ({data}) => { return (new Literal(LiteralKind.STRING, data[0].value)); }, symbols: [ { token: "string" } ] }
+                ],
+                MaybeExpression: [
+                    { name: "MaybeExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "MaybeExpression.RPT01x1" ] }
+                ],
+                "MaybeExpression.RPT01x1": [
+                    { name: "MaybeExpression.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "Expression" ] },
+                    { name: "MaybeExpression.RPT01x1", postprocess: () => null, symbols: [ ] }
+                ],
+                MaybeFunctionParams: [
+                    { name: "MaybeFunctionParams", postprocess: ({data}) => { return (data[0]); }, symbols: [ "MaybeFunctionParams.RPT01x1" ] }
+                ],
+                "MaybeFunctionParams.RPT01x1": [
+                    { name: "MaybeFunctionParams.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "FunctionParams" ] },
+                    { name: "MaybeFunctionParams.RPT01x1", postprocess: () => null, symbols: [ ] }
                 ],
                 MultiplicativeExpression: [
                     { name: "MultiplicativeExpression", postprocess: ({data}) => { return (data[0]); }, symbols: [ "UnaryExpression" ] },
@@ -197,42 +219,20 @@ class grammar {
                     { name: "PrimaryExpression.RPT01x1.SUBx1", symbols: [ { literal: "ELSE" }, "_", "Expression" ] }
                 ],
                 PrivateScalarFunction: [
-                    { name: "PrivateScalarFunction", postprocess: ({data}) => { return (new CreateFunctionStmt(
-                data[2][0].value === "PRIVATE",
-                [data[2][0].value],
-                data[6].value,
-                data[8] || [],
-                data[13],
-                null, // determinism
-                null, // language
-                [],   // options
-                data[19]
-            )); }, symbols: [ { literal: "CREATE" }, "_", "PrivateScalarFunction.SUBx1", "_", { literal: "FUNCTION" }, "_", { token: "word" }, { literal: "(" }, "PrivateScalarFunction.RPT01x1", { literal: ")" }, "_", { literal: "RETURNS" }, "_", "DataType", "_", { literal: "AS" }, "_", { literal: "(" }, "_", "Expression", "_", { literal: ")" }, { literal: ";" } ] }
-                ],
-                "PrivateScalarFunction.RPT01x1": [
-                    { name: "PrivateScalarFunction.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "FunctionParams" ] },
-                    { name: "PrivateScalarFunction.RPT01x1", postprocess: () => null, symbols: [ ] }
+                    { name: "PrivateScalarFunction", postprocess: ({data}) => { return (new CreateFunctionDefinitionStmt(
+				/*isPrivate*/true,
+				data[3]
+			)); }, symbols: [ { literal: "CREATE" }, "_", "PrivateScalarFunction.SUBx1", "FunctionBody" ] }
                 ],
                 "PrivateScalarFunction.SUBx1": [
                     { name: "PrivateScalarFunction.SUBx1", symbols: [ { literal: "TEMP" } ] },
                     { name: "PrivateScalarFunction.SUBx1", symbols: [ { literal: "PRIVATE" } ] }
                 ],
                 PublicScalarFunction: [
-                    { name: "PublicScalarFunction", postprocess: ({data}) => { return (new CreateFunctionStmt(
-                false,
-                ["PUBLIC"],
-                data[6].value,
-                data[8] || [],
-                data[13],
-                null, // determinism
-                null, // language
-                [],   // options
-                data[19]
-            )); }, symbols: [ { literal: "CREATE" }, "_", { literal: "PUBLIC" }, "_", { literal: "FUNCTION" }, "_", { token: "word" }, { literal: "(" }, "PublicScalarFunction.RPT01x1", { literal: ")" }, "_", { literal: "RETURNS" }, "_", "DataType", "_", { literal: "AS" }, "_", { literal: "(" }, "_", "Expression", "_", { literal: ")" }, { literal: ";" } ] }
-                ],
-                "PublicScalarFunction.RPT01x1": [
-                    { name: "PublicScalarFunction.RPT01x1", postprocess: ({data}) => data[0], symbols: [ "FunctionParams" ] },
-                    { name: "PublicScalarFunction.RPT01x1", postprocess: () => null, symbols: [ ] }
+                    { name: "PublicScalarFunction", postprocess: ({data}) => { return (new CreateFunctionDefinitionStmt(
+				/*isPrivate*/false,
+				data[3]
+			)); }, symbols: [ { literal: "CREATE" }, "_", { literal: "PUBLIC" }, "FunctionBody" ] }
                 ],
                 StructField: [
                     { name: "StructField", symbols: [ { token: "word" }, "__", "DataType" ] },

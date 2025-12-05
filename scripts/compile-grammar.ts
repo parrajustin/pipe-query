@@ -54,7 +54,7 @@ async function compile(inputPath: string, outputPath: string) {
     });
 
     if (typeof ts === 'string') {
-        const imports = `import { BetweenExpr, Binary, BinaryOperator, CaseExpr, CreateFunctionStmt, FunctionParam, InExpr, IsBoolExpr, IsNullExpr, LikeExpr, Literal, LiteralKind, SimpleType, SimpleTypeKind, Unary, UnaryOperator, Variable } from "../src/parser/ast";\n`;
+        const imports = `import { BetweenExpr, Binary, BinaryOperator, CaseExpr, CreateFunctionStmt, CreateFunctionDefinitionStmt, FunctionParam, FunctionBodyStmt, InExpr, IsBoolExpr, IsNullExpr, LikeExpr, Literal, LiteralKind, SimpleType, SimpleTypeKind, Unary, UnaryOperator, Variable } from "../src/parser/ast";\n`;
         fs.writeFileSync(fullOutputPath, imports + ts, 'utf8');
     } else {
         console.warn("Unexpected output format from Generate, attempting to write as JSON if object");

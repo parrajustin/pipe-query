@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npm run compile:grammer && jest",
+    "test:quick": "npm run compile:grammer && jest",
     "compile:grammer": "node scripts/compile-grammar.ts"
   },
   "repository": {

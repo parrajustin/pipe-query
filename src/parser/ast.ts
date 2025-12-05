@@ -422,8 +422,7 @@ export class FunctionParam {
 
 export class CreateFunctionStmt extends Stmt {
     constructor(
-        public readonly is_private: boolean,
-        public readonly modifiers: string[], // TEMP, PUBLIC, PRIVATE
+        public readonly isPrivate: boolean,
         public readonly name: string,
         public readonly params: FunctionParam[],
         public readonly returnType: Type | null,
@@ -438,6 +437,26 @@ export class CreateFunctionStmt extends Stmt {
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitCreateFunctionStmt(this);
     }
+}
+
+export class CreateFunctionDefinitionStmt {
+    constructor (
+        public readonly isPrivate: boolean,
+        public readonly bodyStmt: FunctionBodyStmt,
+    ) {}
+
+    public getName(): string {
+        return this.bodyStmt.name;
+    }
+}
+
+export class FunctionBodyStmt {
+    constructor (
+        public readonly name: string,
+        public readonly params: FunctionParam[],
+        public readonly returnType: Type,
+        public readonly body: Expr | string, // Expr for SQL, string for JS
+    ) {}
 }
 
 export class CreateTableFunctionStmt extends Stmt {

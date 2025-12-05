@@ -102,34 +102,33 @@ grammar {
 		| PublicScalarFunction => ( $0 )
 
 	[PrivateScalarFunction]
-        | "CREATE" _ ("TEMP" | "PRIVATE") _ "FUNCTION" _ <word> "(" FunctionParams? ")" _ "RETURNS" _ DataType _ "AS" _ "(" _ Expression _ ")" ";" => (
-            new CreateFunctionStmt(
-                $2[0].value === "PRIVATE",
-                [$2[0].value],
-                $6.value,
-                $8 || [],
-                $13,
-                null, // determinism
-                null, // language
-                [],   // options
-                $19
+        | "CREATE" _ ("TEMP" | "PRIVATE") FunctionBody@body => (
+			new CreateFunctionDefinitionStmt(
+				/*isPrivate*/true,
+				$body
+			)
+		)
+
+	[PublicScalarFunction]
+        | "CREATE" _ "PUBLIC" FunctionBody@body => (
+			new CreateFunctionDefinitionStmt(
+				/*isPrivate*/false,
+				$body
+			)
+		)
+
+	[FunctionBody]
+		| _ "FUNCTION" _ <word>@name "(" MaybeFunctionParams@params ")" _ "RETURNS" _ DataType@return _ "AS" _ "(" _ MaybeExpression@expr _ ")" ";" => (
+            new FunctionBodyStmt(
+                $name.value,
+                $params || [],
+                $return,
+                $expr
             )
         )
 
-	[PublicScalarFunction]
-        | "CREATE" _ "PUBLIC" _ "FUNCTION" _ <word> "(" FunctionParams? ")" _ "RETURNS" _ DataType _ "AS" _ "(" _ Expression _ ")" ";" => (
-            new CreateFunctionStmt(
-                false,
-                ["PUBLIC"],
-                $6.value,
-                $8 || [],
-                $13,
-                null, // determinism
-                null, // language
-                [],   // options
-                $19
-            )
-        )
+	[MaybeFunctionParams]
+		| FunctionParams? => ( $0 )
 
 	[FunctionParams]
 		| FunctionParam => ( [$0] )
@@ -167,7 +166,9 @@ grammar {
         | <word> __ DataType
         | DataType
 
-	// TODO: implement scalar expressions.
+	[MaybeExpression]
+		| Expression? => ( $0 )
+
 	[Expression]
 		| OrExpression => ( $0 )
 
